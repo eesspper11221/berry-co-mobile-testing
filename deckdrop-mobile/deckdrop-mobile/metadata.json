@@ -1,0 +1,6 @@
+{
+  "name": "Berry Co. Store",
+  "description": "Berry Co. Hobby & TCG Card Game Store - Collect. Trade. Play.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
