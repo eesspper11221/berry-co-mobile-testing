@@ -10,7 +10,7 @@ on:
 
 defaults:
   run:
-    working-directory: deckdrop-mobile
+    working-directory: deckdrop-mobile/deckdrop-mobile
 
 jobs:
   build-apk:
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: deckdrop-mobile/package-lock.json
+          cache-dependency-path: deckdrop-mobile/deckdrop-mobile/package-lock.json
 
       - name: Set up Java
         uses: actions/setup-java@v4
@@ -47,11 +47,11 @@ jobs:
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
-        working-directory: deckdrop-mobile/android
+        working-directory: deckdrop-mobile/deckdrop-mobile/android
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: berry-co-debug-apk
-          path: deckdrop-mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          path: deckdrop-mobile/deckdrop-mobile/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
