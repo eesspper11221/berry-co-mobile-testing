@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import {
   Search,
@@ -10,13 +10,32 @@ import {
   Layers,
   Heart,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
+const PROMOTIONAL_BANNERS = [
+  { image: '/carousel/Pukimon%20TCG.jpg', fallback: '/carousel/pokemon-tcg.svg', label: 'Pokemon TCG', categories: ['Cards'] },
+  { image: '/carousel/Magic.jpg', fallback: '/carousel/magic.svg', label: 'Magic: The Gathering', categories: ['Cards'] },
+  { image: '/carousel/One%20Piece.jpg', fallback: '/carousel/one-piece.svg', label: 'One Piece', series: ['One Piece'] },
+  { image: '/carousel/Fig.jpg', fallback: '/carousel/figurines.svg', label: 'Figurines & Collectibles', categories: ['Figurines'] },
+  { image: '/carousel/Card%20Acc.jpg', fallback: '/carousel/accessories-sale.svg', label: 'Card Accessories', tags: ['Accessories'] },
+  { image: '/carousel/Promos.jpg', fallback: '/carousel/accessories-sale.svg', label: 'Special Sale', tags: ['Sale'] },
+];
+
 export const HomeView: React.FC = () => {
   const { products, navigateTo, addToCart, toggleWishlist, isWishlisted, setFilters } = useStore();
   const [searchInput, setSearchInput] = useState('');
+  const [activeBanner, setActiveBanner] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveBanner((current) => (current + 1) % PROMOTIONAL_BANNERS.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const featuredProducts = products.filter((p) => p.featured);
   const categories = ['All', 'Cards', 'Figurines', 'Pokemon TCG', 'Magic The Gathering', 'Senran Kagura'];
@@ -104,6 +123,67 @@ export const HomeView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Local promotional image carousel */}
+      <section className="px-4 space-y-2" aria-label="Berry Co. promotions">
+        <div className="relative overflow-hidden rounded-3xl border border-[#35322E]/10 bg-[#FAF5EB] shadow-xs">
+          <div className="aspect-[2/1] w-full">
+            <img
+              src={PROMOTIONAL_BANNERS[activeBanner].image}
+              alt={PROMOTIONAL_BANNERS[activeBanner].label}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = PROMOTIONAL_BANNERS[activeBanner].fallback;
+              }}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveBanner((current) => (current - 1 + PROMOTIONAL_BANNERS.length) % PROMOTIONAL_BANNERS.length)}
+            className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#FAF5EB]/90 text-[#35322E] shadow-sm"
+            aria-label="Previous promotion"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveBanner((current) => (current + 1) % PROMOTIONAL_BANNERS.length)}
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#FAF5EB]/90 text-[#35322E] shadow-sm"
+            aria-label="Next promotion"
+          >
+            <ChevronRight size={17} />
+          </button>
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#35322E]/70 px-2.5 py-1.5">
+            {PROMOTIONAL_BANNERS.map((banner, index) => (
+              <button
+                key={banner.image}
+                type="button"
+                onClick={() => setActiveBanner(index)}
+                className={`h-1.5 rounded-full transition-all ${index === activeBanner ? 'w-5 bg-white' : 'w-1.5 bg-white/55'}`}
+                aria-label={`Show ${banner.label}`}
+                aria-current={index === activeBanner}
+              />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const banner = PROMOTIONAL_BANNERS[activeBanner];
+            setFilters((previous) => ({
+              ...previous,
+              categories: banner.categories || [],
+              series: banner.series || [],
+              tags: banner.tags || [],
+            }));
+            navigateTo('catalog');
+          }}
+          className="w-full text-left text-[11px] font-black uppercase tracking-wider text-[#E23B2E]"
+        >
+          Shop {PROMOTIONAL_BANNERS[activeBanner].label} <ArrowRight size={12} className="inline" />
+        </button>
+      </section>
 
       {/* 2️⃣ Mobile Search Bar */}
       <div className="px-4">

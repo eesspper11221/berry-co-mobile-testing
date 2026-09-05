@@ -4,7 +4,7 @@ This build is intentionally local-first for APK testing. Products, cart state, w
 
 When the backend is ready, replace the local product initialization and product mutation functions in `src/context/StoreContext.tsx` with a Supabase repository. Keep the `Product` type and context methods as the UI contract so the screens do not need to change.
 
-The catalog starts empty and displays reserved product slots for the future web inventory sync. Product images supplied during local testing should use files from `public/` or paths such as `/berryco-logo.svg`.
+The catalog starts empty and displays reserved product slots for the future web inventory sync. The home carousel uses the local JPG files in `public/carousel/`: `Pukimon TCG.jpg`, `Magic.jpg`, `One Piece.jpg`, `Fig.jpg`, `Card Acc.jpg`, and `Promos.jpg`.
 
 ## Run Locally
 

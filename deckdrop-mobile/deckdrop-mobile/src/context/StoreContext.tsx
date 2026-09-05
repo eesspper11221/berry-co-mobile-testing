@@ -114,7 +114,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('deckdrop_user');
-    return saved ? JSON.parse(saved) : DEMO_USERS[0];
+    return saved ? JSON.parse(saved) : null;
   });
 
   // Screen & Navigation
