@@ -165,7 +165,17 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-          {featuredProducts.map((item) => (
+          {featuredProducts.length === 0 ? (
+            <div className="w-full min-h-32 rounded-2xl border border-dashed border-[#35322E]/25 bg-[#FAF5EB] px-5 py-6 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl border border-dashed border-[#E23B2E]/50 flex items-center justify-center text-[#E23B2E] shrink-0">
+                <Plus size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-[#35322E]">Featured product slot</p>
+                <p className="text-[11px] font-medium text-[#35322E]/60">Waiting for web inventory sync</p>
+              </div>
+            </div>
+          ) : featuredProducts.map((item) => (
             <div
               key={item.id}
               className="w-44 shrink-0 bg-[#FAF5EB] rounded-2xl p-3 border border-[#35322E]/10 shadow-xs flex flex-col justify-between"
@@ -251,7 +261,19 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {displayedProducts.map((item) => (
+          {displayedProducts.length === 0 ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={`slot-${index}`} className="aspect-[0.82] rounded-2xl border border-dashed border-[#35322E]/20 bg-[#FAF5EB] p-3 flex flex-col justify-between">
+                <div className="aspect-square rounded-xl bg-[#F3E4C8] border border-dashed border-[#35322E]/15 flex items-center justify-center text-[#35322E]/30">
+                  <Plus size={24} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#35322E]/45">Inventory slot {index + 1}</p>
+                  <p className="text-[11px] font-semibold text-[#35322E]/55">Ready for web sync</p>
+                </div>
+              </div>
+            ))
+          ) : displayedProducts.map((item) => (
             <ProductCardItem
               key={item.id}
               product={item}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { UserCheck, Sparkles, Lock, Mail, User } from 'lucide-react';
+import { UserCheck, Sparkles, Lock, Mail, User, Eye, EyeOff, Check } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
@@ -14,11 +14,18 @@ export const AuthView: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setErrorMsg('Please enter both email and password.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
       return;
     }
 
@@ -40,8 +47,20 @@ export const AuthView: React.FC = () => {
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!fullName.trim() || !email.trim() || !password) {
+      setErrorMsg('Please complete all required fields.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
+      return;
+    }
     if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match.');
+      return;
+    }
+    if (!acceptTerms) {
+      setErrorMsg('Please accept the Berry Co. terms to continue.');
       return;
     }
 
@@ -198,14 +217,17 @@ export const AuthView: React.FC = () => {
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
+                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-10 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
                 />
                 <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
             </div>
 
@@ -258,14 +280,17 @@ export const AuthView: React.FC = () => {
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
+                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-10 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
                 />
                 <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
+                <button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
             </div>
 
@@ -275,16 +300,27 @@ export const AuthView: React.FC = () => {
               </label>
               <div className="relative">
                 <input
-                  type="password"
+                  type={showConfirmPassword ? 'text' : 'password'}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
+                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-10 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
                 />
                 <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
+                <button type="button" onClick={() => setShowConfirmPassword((visible) => !visible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}>
+                  {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
               </div>
             </div>
+
+            <label className="flex items-start gap-2 text-[11px] font-semibold text-[#35322E]/75 cursor-pointer">
+              <input type="checkbox" checked={acceptTerms} onChange={(e) => setAcceptTerms(e.target.checked)} className="sr-only" />
+              <span className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${acceptTerms ? 'bg-[#E23B2E] border-[#E23B2E] text-white' : 'border-[#35322E]/30 bg-[#F3E4C8]'}`}>
+                {acceptTerms && <Check size={11} />}
+              </span>
+              <span>I agree to Berry Co.'s terms and understand that my account is for shopping use.</span>
+            </label>
 
             <button
               type="submit"

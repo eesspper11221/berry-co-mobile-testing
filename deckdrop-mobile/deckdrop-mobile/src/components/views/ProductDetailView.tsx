@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ShoppingBag,
   Zap,
+  ChevronLeft,
 } from 'lucide-react';
 
 export const ProductDetailView: React.FC = () => {
@@ -127,6 +128,27 @@ export const ProductDetailView: React.FC = () => {
               </button>
             </div>
 
+            {gallery.length > 1 && (
+              <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 flex items-center justify-between pointer-events-none">
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((index) => (index - 1 + gallery.length) % gallery.length)}
+                  className="w-8 h-8 rounded-full bg-[#FAF5EB]/90 flex items-center justify-center text-[#35322E] shadow-xs pointer-events-auto"
+                  aria-label="Previous product image"
+                >
+                  <ChevronLeft size={17} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveImageIndex((index) => (index + 1) % gallery.length)}
+                  className="w-8 h-8 rounded-full bg-[#FAF5EB]/90 flex items-center justify-center text-[#35322E] shadow-xs pointer-events-auto"
+                  aria-label="Next product image"
+                >
+                  <ChevronRight size={17} />
+                </button>
+              </div>
+            )}
+
             {/* Status Badges */}
             <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
               <span
@@ -149,7 +171,7 @@ export const ProductDetailView: React.FC = () => {
 
           {/* Thumbnails if multiple images */}
           {gallery.length > 1 && (
-            <div className="flex gap-2 justify-center">
+            <div className="flex items-center gap-2 justify-center">
               {gallery.map((img, idx) => (
                 <button
                   key={idx}

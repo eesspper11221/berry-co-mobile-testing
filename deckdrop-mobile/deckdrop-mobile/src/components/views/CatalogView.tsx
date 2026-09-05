@@ -286,10 +286,11 @@ export const CatalogView: React.FC = () => {
 
       {/* 📦 Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div className="bg-[#FAF5EB] rounded-3xl p-8 text-center space-y-3 border border-[#35322E]/10 my-4">
-          <p className="text-sm font-black text-[#35322E]">No collectibles match your filters</p>
+        <div className="space-y-4 my-4">
+          <div className="bg-[#FAF5EB] rounded-3xl p-7 text-center space-y-3 border border-[#35322E]/10">
+          <p className="text-sm font-black text-[#35322E]">Your mobile catalog is ready</p>
           <p className="text-xs text-[#35322E]/60">
-            Try adjusting your search keyword or clearing tags to find rare items.
+            Products added from the Berry Co. web inventory will appear in these slots automatically.
           </p>
           <button
             type="button"
@@ -297,8 +298,19 @@ export const CatalogView: React.FC = () => {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#E23B2E] text-white text-xs font-black hover:bg-[#B82A20] transition"
           >
             <RotateCcw size={12} />
-            <span>Reset All Filters</span>
+            <span>Reset Filters</span>
           </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={`catalog-slot-${index}`} className="aspect-[0.82] rounded-2xl border border-dashed border-[#35322E]/20 bg-[#FAF5EB] p-3 flex flex-col justify-between">
+                <div className="aspect-square rounded-xl bg-[#F3E4C8] border border-dashed border-[#35322E]/15 flex items-center justify-center text-[#35322E]/30">
+                  <span className="text-lg font-black">+</span>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-wider text-[#35322E]/45">Product slot {index + 1}</p>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">

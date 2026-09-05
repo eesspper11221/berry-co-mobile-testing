@@ -1,12 +1,10 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Berry Co. Mobile Testing App
 
-# Run and deploy your AI Studio app
+This build is intentionally local-first for APK testing. Products, cart state, wishlist state, orders, and the demo account are stored in browser/WebView localStorage. No Supabase client is required yet.
 
-This contains everything you need to run your app locally.
+When the backend is ready, replace the local product initialization and product mutation functions in `src/context/StoreContext.tsx` with a Supabase repository. Keep the `Product` type and context methods as the UI contract so the screens do not need to change.
 
-View your app in AI Studio: https://ai.studio/apps/7aa32a5c-6698-4dc0-b509-8c144d2109a5
+The catalog starts empty and displays reserved product slots for the future web inventory sync. Product images supplied during local testing should use files from `public/` or paths such as `/berryco-logo.svg`.
 
 ## Run Locally
 
@@ -15,8 +13,7 @@ View your app in AI Studio: https://ai.studio/apps/7aa32a5c-6698-4dc0-b509-8c144
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
 
 ## Build an Android APK

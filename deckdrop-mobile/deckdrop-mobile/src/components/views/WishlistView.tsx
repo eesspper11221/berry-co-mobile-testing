@@ -3,7 +3,7 @@ import { useStore } from '../../context/StoreContext';
 import { Heart, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 
 export const WishlistView: React.FC = () => {
-  const { wishlist, products, addToCart, toggleWishlist, navigateTo } = useStore();
+  const { wishlist, products, addToCart, toggleWishlist, clearWishlist, navigateTo } = useStore();
 
   const wishlistedProducts = products.filter((p) => wishlist.includes(p.id));
 
@@ -34,10 +34,17 @@ export const WishlistView: React.FC = () => {
   return (
     <div className="space-y-4 px-4 pt-3 pb-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-black text-[#35322E]">Saved Collectibles</h1>
-        <span className="text-xs font-bold text-[#35322E]/60">
-          {wishlistedProducts.length} item(s)
-        </span>
+        <div>
+          <h1 className="text-xl font-black text-[#35322E]">Saved Collectibles</h1>
+          <span className="text-xs font-bold text-[#35322E]/60">{wishlistedProducts.length} item(s)</span>
+        </div>
+        <button
+          type="button"
+          onClick={clearWishlist}
+          className="text-[11px] font-black text-[#E23B2E] hover:underline"
+        >
+          Clear all
+        </button>
       </div>
 
       <div className="space-y-3">
