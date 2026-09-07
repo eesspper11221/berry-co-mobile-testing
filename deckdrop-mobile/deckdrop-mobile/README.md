@@ -10,7 +10,7 @@ View your app in AI Studio: https://ai.studio/apps/7aa32a5c-6698-4dc0-b509-8c144
 
 ## Run Locally
 
-**Prerequisites:**  Node.js
+**Prerequisites:** Node.js
 
 
 1. Install dependencies:
@@ -23,7 +23,7 @@ View your app in AI Studio: https://ai.studio/apps/7aa32a5c-6698-4dc0-b509-8c144
 
 **Prerequisites:** Android Studio, Android SDK, and a Java 17 JDK.
 
-Capacitor wraps the built Vite app in a native Android project. From this directory:
+Capacitor wraps the Node-built web app in a native Android project. From this directory:
 
 1. Sync the web app into Android:
    `npm run mobile:sync`
