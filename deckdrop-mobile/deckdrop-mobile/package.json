@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "berry-co-mobile",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -29,6 +29,8 @@
     "@tailwindcss/cli": "^4.3.3",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.7.28",
     "esbuild": "^0.25.0",

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import {
   Search,
@@ -10,13 +10,32 @@ import {
   Layers,
   Heart,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
+const PROMOTIONAL_BANNERS = [
+  { image: '/carousel/Pukimon%20TCG.jpg', fallback: '/carousel/Pukimon%20TCG.jpg', label: 'Pokemon TCG', categories: ['Cards'] },
+  { image: '/carousel/Magic.jpg', fallback: '/carousel/Magic.jpg', label: 'Magic: The Gathering', categories: ['Cards'] },
+  { image: '/carousel/One%20Piece.jpg', fallback: '/carousel/One Piece.jpg', label: 'One Piece', series: ['One Piece'] },
+  { image: '/carousel/Fig.jpg', fallback: '/carousel/Fig.jpg', label: 'Figurines & Collectibles', categories: ['Figurines'] },
+  { image: '/carousel/Card%20Acc.jpg', fallback: '/carousel/Card Acc.jpg', label: 'Card Accessories', tags: ['Accessories'] },
+  { image: '/carousel/Promos.jpg', fallback: '/carousel/Promos.jpg', label: 'Special Sale', tags: ['Sale'] },
+];
+
 export const HomeView: React.FC = () => {
   const { products, navigateTo, addToCart, toggleWishlist, isWishlisted, setFilters } = useStore();
   const [searchInput, setSearchInput] = useState('');
+  const [activeBanner, setActiveBanner] = useState(0);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setActiveBanner((current) => (current + 1) % PROMOTIONAL_BANNERS.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const featuredProducts = products.filter((p) => p.featured);
   const categories = ['All', 'Cards', 'Figurines', 'Pokemon TCG', 'Magic The Gathering', 'Senran Kagura'];
@@ -105,6 +124,67 @@ export const HomeView: React.FC = () => {
         </div>
       </div>
 
+      {/* Local promotional image carousel */}
+      <section className="px-4 space-y-2" aria-label="Berry Co. promotions">
+        <div className="relative overflow-hidden rounded-3xl border border-[#35322E]/10 bg-[#FAF5EB] shadow-xs">
+          <div className="aspect-[2/1] w-full">
+            <img
+              src={PROMOTIONAL_BANNERS[activeBanner].image}
+              alt={PROMOTIONAL_BANNERS[activeBanner].label}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = PROMOTIONAL_BANNERS[activeBanner].fallback;
+              }}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveBanner((current) => (current - 1 + PROMOTIONAL_BANNERS.length) % PROMOTIONAL_BANNERS.length)}
+            className="absolute left-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#FAF5EB]/90 text-[#35322E] shadow-sm"
+            aria-label="Previous promotion"
+          >
+            <ChevronLeft size={17} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveBanner((current) => (current + 1) % PROMOTIONAL_BANNERS.length)}
+            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-[#FAF5EB]/90 text-[#35322E] shadow-sm"
+            aria-label="Next promotion"
+          >
+            <ChevronRight size={17} />
+          </button>
+          <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#35322E]/70 px-2.5 py-1.5">
+            {PROMOTIONAL_BANNERS.map((banner, index) => (
+              <button
+                key={banner.image}
+                type="button"
+                onClick={() => setActiveBanner(index)}
+                className={`h-1.5 rounded-full transition-all ${index === activeBanner ? 'w-5 bg-white' : 'w-1.5 bg-white/55'}`}
+                aria-label={`Show ${banner.label}`}
+                aria-current={index === activeBanner}
+              />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            const banner = PROMOTIONAL_BANNERS[activeBanner];
+            setFilters((previous) => ({
+              ...previous,
+              categories: banner.categories || [],
+              series: banner.series || [],
+              tags: banner.tags || [],
+            }));
+            navigateTo('catalog');
+          }}
+          className="w-full text-left text-[11px] font-black uppercase tracking-wider text-[#E23B2E]"
+        >
+          Shop {PROMOTIONAL_BANNERS[activeBanner].label} <ArrowRight size={12} className="inline" />
+        </button>
+      </section>
+
       {/* 2️⃣ Mobile Search Bar */}
       <div className="px-4">
         <form onSubmit={handleSearchSubmit} className="relative">
@@ -165,7 +245,17 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="flex gap-3 overflow-x-auto no-scrollbar px-4 pb-2">
-          {featuredProducts.map((item) => (
+          {featuredProducts.length === 0 ? (
+            <div className="w-full min-h-32 rounded-2xl border border-dashed border-[#35322E]/25 bg-[#FAF5EB] px-5 py-6 flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl border border-dashed border-[#E23B2E]/50 flex items-center justify-center text-[#E23B2E] shrink-0">
+                <Plus size={20} />
+              </div>
+              <div>
+                <p className="text-xs font-black text-[#35322E]">Featured product slot</p>
+                <p className="text-[11px] font-medium text-[#35322E]/60">Waiting for web inventory sync</p>
+              </div>
+            </div>
+          ) : featuredProducts.map((item) => (
             <div
               key={item.id}
               className="w-44 shrink-0 bg-[#FAF5EB] rounded-2xl p-3 border border-[#35322E]/10 shadow-xs flex flex-col justify-between"
@@ -251,7 +341,19 @@ export const HomeView: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          {displayedProducts.map((item) => (
+          {displayedProducts.length === 0 ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={`slot-${index}`} className="aspect-[0.82] rounded-2xl border border-dashed border-[#35322E]/20 bg-[#FAF5EB] p-3 flex flex-col justify-between">
+                <div className="aspect-square rounded-xl bg-[#F3E4C8] border border-dashed border-[#35322E]/15 flex items-center justify-center text-[#35322E]/30">
+                  <Plus size={24} />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#35322E]/45">Inventory slot {index + 1}</p>
+                  <p className="text-[11px] font-semibold text-[#35322E]/55">Ready for web sync</p>
+                </div>
+              </div>
+            ))
+          ) : displayedProducts.map((item) => (
             <ProductCardItem
               key={item.id}
               product={item}

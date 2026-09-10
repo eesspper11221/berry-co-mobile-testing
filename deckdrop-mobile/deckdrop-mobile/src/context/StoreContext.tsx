@@ -35,6 +35,7 @@ interface StoreContextType {
   // Wishlist
   wishlist: string[]; // product IDs
   toggleWishlist: (productId: string) => void;
+  clearWishlist: () => void;
   isWishlisted: (productId: string) => boolean;
 
   // Orders
@@ -87,6 +88,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Persistent local states with fallback to initial data
   const [products, setProducts] = useState<Product[]>(() => {
     const saved = localStorage.getItem('deckdrop_products');
+    const seedVersion = localStorage.getItem('deckdrop_products_seed_version');
+    if (seedVersion !== 'empty-v1') {
+      localStorage.setItem('deckdrop_products_seed_version', 'empty-v1');
+      localStorage.removeItem('deckdrop_products');
+      return [];
+    }
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
 
@@ -102,12 +109,12 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const [wishlist, setWishlist] = useState<string[]>(() => {
     const saved = localStorage.getItem('deckdrop_wishlist');
-    return saved ? JSON.parse(saved) : ['prod-1', 'prod-3'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('deckdrop_user');
-    return saved ? JSON.parse(saved) : DEMO_USERS[0];
+    return saved ? JSON.parse(saved) : null;
   });
 
   // Screen & Navigation
@@ -268,6 +275,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const isWishlisted = (productId: string) => wishlist.includes(productId);
 
+  const clearWishlist = () => {
+    setWishlist([]);
+    showToast('Wishlist cleared.', 'info');
+  };
+
   // Orders
   const placeOrder = (details: {
     customer_name: string;
@@ -414,6 +426,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cartCount,
         wishlist,
         toggleWishlist,
+        clearWishlist,
         isWishlisted,
         orders,
         selectedOrder,

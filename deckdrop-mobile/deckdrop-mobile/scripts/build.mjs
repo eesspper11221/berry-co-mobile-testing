@@ -7,12 +7,16 @@ import esbuild from 'esbuild';
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDirectory = path.join(projectDirectory, 'dist');
 const assetsDirectory = path.join(distDirectory, 'assets');
+const publicDirectory = path.join(projectDirectory, 'public');
 const tailwindCommand = process.platform === 'win32'
   ? path.join(projectDirectory, 'node_modules', '.bin', 'tailwindcss.cmd')
   : path.join(projectDirectory, 'node_modules', '.bin', 'tailwindcss');
 
 fs.rmSync(distDirectory, {recursive: true, force: true});
 fs.mkdirSync(assetsDirectory, {recursive: true});
+if (fs.existsSync(publicDirectory)) {
+  fs.cpSync(publicDirectory, distDirectory, {recursive: true});
+}
 
 await esbuild.build({
   bundle: true,

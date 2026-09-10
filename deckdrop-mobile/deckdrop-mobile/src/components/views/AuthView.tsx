@@ -1,300 +1,141 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { UserCheck, Sparkles, Lock, Mail, User } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
 export const AuthView: React.FC = () => {
-  const { setCurrentUser, navigateTo, showToast } = useStore();
-  const [tab, setTab] = useState<'login' | 'register'>('login');
-
-  // Form states
+  const { currentScreen, setCurrentUser, navigateTo, showToast } = useStore();
+  const [tab, setTab] = useState<'login' | 'register'>(currentScreen === 'register' ? 'register' : 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setErrorMsg('Please enter both email and password.');
+  useEffect(() => {
+    setTab(currentScreen === 'register' ? 'register' : 'login');
+  }, [currentScreen]);
+
+  const switchTab = (nextTab: 'login' | 'register') => {
+    setTab(nextTab);
+    setErrorMsg('');
+    navigateTo(nextTab === 'login' ? 'login' : 'register');
+  };
+
+  const createLocalUser = (name: string): UserProfile => ({
+    id: `usr-${Date.now()}`,
+    full_name: name,
+    email,
+    phone: '+63 917 000 0000',
+    role: 'customer',
+    status: 'active',
+    created_at: new Date().toISOString(),
+    reward_points: tab === 'register' ? 200 : 100,
+  });
+
+  const handleLogin = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!email.trim() || !password) {
+      setErrorMsg('Please enter your email and password.');
       return;
     }
-
-    const newUser: UserProfile = {
-      id: `usr-${Date.now()}`,
-      full_name: email.split('@')[0],
-      email: email,
-      phone: '+63 917 000 0000',
-      role: 'customer',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      reward_points: 100,
-    };
-
-    setCurrentUser(newUser);
-    showToast(`Signed in as ${newUser.full_name}!`, 'success');
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
+      return;
+    }
+    const user = createLocalUser(email.split('@')[0]);
+    setCurrentUser(user);
+    showToast(`Signed in as ${user.full_name}.`, 'success');
     navigateTo('home');
   };
 
-  const handleRegister = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
+      setErrorMsg('Please complete all required fields.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg('Password must be at least 6 characters.');
+      return;
+    }
     if (password !== confirmPassword) {
       setErrorMsg('Passwords do not match.');
       return;
     }
-
-    const newUser: UserProfile = {
-      id: `usr-${Date.now()}`,
-      full_name: fullName || 'New Collector',
-      email: email,
-      phone: '+63 917 000 0000',
-      role: 'customer',
-      status: 'active',
-      created_at: new Date().toISOString(),
-      reward_points: 200,
-    };
-
-    setCurrentUser(newUser);
-    showToast(`Welcome to Berry Co., ${newUser.full_name}! 🎉`, 'success');
+    if (!acceptTerms) {
+      setErrorMsg('Please accept the terms to continue.');
+      return;
+    }
+    const user = createLocalUser(fullName.trim());
+    setCurrentUser(user);
+    showToast(`Welcome to Berry Co., ${user.full_name}.`, 'success');
     navigateTo('home');
   };
 
-  const loginDemoAccount = (account: 'juan' | 'maria') => {
-    if (account === 'juan') {
-      setCurrentUser({
-        id: 'usr-customer-1',
-        full_name: 'Juan Dela Cruz',
-        email: 'collector@berryco.ph',
-        phone: '+63 917 555 1234',
-        role: 'customer',
-        status: 'active',
-        created_at: '2025-01-15T08:00:00Z',
-        reward_points: 480,
-      });
-      showToast('Logged in as Juan Dela Cruz (TCG Collector)', 'success');
-      navigateTo('home');
-    } else {
-      setCurrentUser({
-        id: 'usr-customer-2',
-        full_name: 'Maria Santos',
-        email: 'maria.santos@berryco.ph',
-        phone: '+63 918 777 8899',
-        role: 'customer',
-        status: 'active',
-        created_at: '2024-11-01T08:00:00Z',
-        reward_points: 620,
-      });
-      showToast('Logged in as Maria Santos (Figurine Collector)', 'success');
-      navigateTo('home');
-    }
-  };
+  const inputClass = 'w-full rounded-xl border border-[#35322E]/20 bg-[#F3E4C8]/75 px-3.5 py-3 text-sm font-semibold text-[#35322E] placeholder-[#35322E]/45 outline-none transition focus:border-[#E23B2E] focus:ring-2 focus:ring-[#E23B2E]/10';
 
   return (
-    <div className="space-y-4 px-4 pt-3 pb-8">
-      {/* Brand Header */}
-      <div className="text-center space-y-1.5 pt-2 flex flex-col items-center">
-        <BerryCoLogo size={52} />
-        <span className="text-2xl font-black text-[#E23B2E] tracking-tight block">
-          Berry Co.
-        </span>
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#35322E]/60">
-          Collect &bull; Trade &bull; Play
-        </p>
-      </div>
-
-      {/* 🧪 Quick Testing One-Tap Logins */}
-      <div className="bg-[#FAF5EB] rounded-3xl p-4 border border-[#35322E]/10 shadow-xs space-y-2.5">
-        <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-[#35322E]">
-          <Sparkles size={14} className="text-[#E23B2E]" />
-          <span>Quick Demo Testing Profiles</span>
+    <main className="min-h-[calc(100dvh-56px)] bg-[#EAD0AA] px-5 py-12 sm:py-20 flex items-start justify-center">
+      <section className="w-full max-w-[390px] rounded-[2rem] border border-[#35322E]/10 bg-[#FAF5EB] px-6 py-7 shadow-[0_18px_45px_rgba(53,50,46,0.14)] sm:px-8 sm:py-8">
+        <div className="flex flex-col items-center text-center">
+          <BerryCoLogo size={48} />
+          <p className="mt-2 text-2xl font-black tracking-tight text-[#E23B2E]">Berry Co.</p>
+          <p className="mt-1 text-[10px] font-black uppercase tracking-[0.18em] text-[#35322E]/55">Collect. Trade. Play.</p>
+          <h1 className="mt-6 text-xl font-black text-[#35322E]">{tab === 'login' ? 'Welcome Back' : 'Create an Account'}</h1>
+          <p className="mt-1 text-xs font-medium text-[#35322E]/60">
+            {tab === 'login' ? 'Sign in to continue shopping rare TCGs and collectibles.' : 'Sign up to start buying rare TCGs and collectibles.'}
+          </p>
         </div>
-        <p className="text-[11px] font-medium text-[#35322E]/70">
-          One-tap test login for instant prototype evaluation:
-        </p>
 
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <button
-            type="button"
-            onClick={() => loginDemoAccount('juan')}
-            className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#F3E4C8] hover:bg-[#EAD0AA] border border-[#35322E]/10 transition active:scale-95 cursor-pointer text-center"
-          >
-            <UserCheck size={18} className="text-[#E23B2E] mb-1" />
-            <span className="text-xs font-black text-[#35322E]">Juan Dela Cruz</span>
-            <span className="text-[9px] font-bold text-[#35322E]/60 uppercase">TCG Collector</span>
+        <div className="mt-6 flex border-b border-[#35322E]/15 text-sm font-black">
+          <button type="button" onClick={() => switchTab('login')} className={`flex-1 border-b-2 pb-3 transition ${tab === 'login' ? 'border-[#E23B2E] text-[#E23B2E]' : 'border-transparent text-[#35322E]/50'}`}>
+            Log In
           </button>
-
-          <button
-            type="button"
-            onClick={() => loginDemoAccount('maria')}
-            className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-[#F3E4C8] hover:bg-[#EAD0AA] border border-[#35322E]/10 transition active:scale-95 cursor-pointer text-center"
-          >
-            <UserCheck size={18} className="text-[#E23B2E] mb-1" />
-            <span className="text-xs font-black text-[#35322E]">Maria Santos</span>
-            <span className="text-[9px] font-bold text-[#35322E]/60 uppercase">Figure Collector</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Main Auth Form Container */}
-      <div className="bg-[#FAF5EB] rounded-3xl p-5 border border-[#35322E]/10 shadow-xs space-y-4">
-        {/* Tab Switcher */}
-        <div className="flex bg-[#F3E4C8] rounded-full p-1 text-xs font-black">
-          <button
-            type="button"
-            onClick={() => {
-              setTab('login');
-              setErrorMsg('');
-            }}
-            className={`flex-1 py-2 rounded-full transition ${
-              tab === 'login' ? 'bg-[#E23B2E] text-white shadow-xs' : 'text-[#35322E]'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setTab('register');
-              setErrorMsg('');
-            }}
-            className={`flex-1 py-2 rounded-full transition ${
-              tab === 'register' ? 'bg-[#E23B2E] text-white shadow-xs' : 'text-[#35322E]'
-            }`}
-          >
-            Create Account
+          <button type="button" onClick={() => switchTab('register')} className={`flex-1 border-b-2 pb-3 transition ${tab === 'register' ? 'border-[#E23B2E] text-[#E23B2E]' : 'border-transparent text-[#35322E]/50'}`}>
+            Sign Up
           </button>
         </div>
 
-        {errorMsg && (
-          <div className="bg-[#E23B2E]/10 border border-[#E23B2E] text-[#E23B2E] text-xs font-bold rounded-xl p-3 text-center">
-            {errorMsg}
-          </div>
-        )}
+        {errorMsg && <div className="mt-4 rounded-xl border border-[#E23B2E]/25 bg-[#E23B2E]/10 px-3 py-2.5 text-center text-xs font-bold text-[#B82A20]">{errorMsg}</div>}
 
-        {tab === 'login' ? (
-          <form onSubmit={handleLogin} className="space-y-3 text-xs font-semibold text-[#35322E]">
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="collector@berryco.ph"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 rounded-full bg-[#E23B2E] hover:bg-[#B82A20] text-white font-black text-xs transition active:scale-95 shadow-xs mt-2"
-            >
-              Sign In
-            </button>
+        {tab === 'register' ? (
+          <form onSubmit={handleRegister} className="mt-5 space-y-4">
+            <label className="block text-xs font-black text-[#35322E]">Full Name<input type="text" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Juan Dela Cruz" className={`${inputClass} mt-1.5`} /></label>
+            <label className="block text-xs font-black text-[#35322E]">Email Address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="collector@berryco.ph" className={`${inputClass} mt-1.5`} /></label>
+            <PasswordField label="Password" value={password} visible={showPassword} onChange={setPassword} onToggle={() => setShowPassword((visible) => !visible)} inputClass={inputClass} />
+            <PasswordField label="Confirm Password" value={confirmPassword} visible={showConfirmPassword} onChange={setConfirmPassword} onToggle={() => setShowConfirmPassword((visible) => !visible)} inputClass={inputClass} />
+            <label className="flex items-start gap-2 text-[11px] font-semibold leading-relaxed text-[#35322E]/70"><input type="checkbox" checked={acceptTerms} onChange={(event) => setAcceptTerms(event.target.checked)} className="mt-0.5 accent-[#E23B2E]" />I agree to Berry Co.'s terms and conditions.</label>
+            <button type="submit" className="w-full rounded-full bg-[#E23B2E] py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#B82A20] active:scale-[.98]">Sign Up</button>
           </form>
         ) : (
-          <form onSubmit={handleRegister} className="space-y-3 text-xs font-semibold text-[#35322E]">
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Full Name
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Juan Dela Cruz"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="collector@berryco.ph"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl py-2.5 pl-9 pr-3 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-                />
-                <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3 rounded-full bg-[#E23B2E] hover:bg-[#B82A20] text-white font-black text-xs transition active:scale-95 shadow-xs mt-2"
-            >
-              Register Account
-            </button>
+          <form onSubmit={handleLogin} className="mt-5 space-y-4">
+            <label className="block text-xs font-black text-[#35322E]">Email Address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="collector@berryco.ph" className={`${inputClass} mt-1.5`} /></label>
+            <PasswordField label="Password" value={password} visible={showPassword} onChange={setPassword} onToggle={() => setShowPassword((visible) => !visible)} inputClass={inputClass} />
+            <div className="flex justify-end"><button type="button" onClick={() => showToast('Password reset will be connected with Supabase later.', 'info')} className="text-[11px] font-bold text-[#E23B2E] hover:underline">Forgot password?</button></div>
+            <button type="submit" className="w-full rounded-full bg-[#E23B2E] py-3 text-sm font-black text-white shadow-sm transition hover:bg-[#B82A20] active:scale-[.98]">Log In</button>
           </form>
         )}
-      </div>
-    </div>
+
+        <p className="mt-6 text-center text-xs font-semibold text-[#35322E]/65">{tab === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}<button type="button" onClick={() => switchTab(tab === 'login' ? 'register' : 'login')} className="font-black text-[#E23B2E] hover:underline">{tab === 'login' ? 'Sign Up' : 'Log In'}</button></p>
+      </section>
+    </main>
   );
 };
+
+interface PasswordFieldProps {
+  label: string;
+  value: string;
+  visible: boolean;
+  onChange: (value: string) => void;
+  onToggle: () => void;
+  inputClass: string;
+}
+
+const PasswordField: React.FC<PasswordFieldProps> = ({ label, value, visible, onChange, onToggle, inputClass }) => (
+  <label className="block text-xs font-black text-[#35322E]">{label}<span className="relative mt-1.5 block"><input type={visible ? 'text' : 'password'} value={value} onChange={(event) => onChange(event.target.value)} placeholder="••••••••" className={`${inputClass} pr-11`} /><button type="button" onClick={onToggle} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#35322E]/50" aria-label={visible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}>{visible ? <EyeOff size={16} /> : <Eye size={16} />}</button></span></label>
+);

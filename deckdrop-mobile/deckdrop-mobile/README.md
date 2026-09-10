@@ -1,23 +1,24 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Berry Co. Mobile Store
 
-# Run and deploy your AI Studio app
+Berry Co. is a local-first React mobile storefront for trading cards, figures, and collectibles. It showcases the customer shopping flow: browsing promotional drops, searching and filtering products, viewing product details, managing a cart and wishlist, signing in locally, and placing test orders.
 
-This contains everything you need to run your app locally.
-
-View your app in AI Studio: https://ai.studio/apps/7aa32a5c-6698-4dc0-b509-8c144d2109a5
+The project uses a custom esbuild and Tailwind build script with a small Express static server.
 
 ## Run Locally
 
-**Prerequisites:** Node.js
+**Prerequisites:** Node.js 20 or newer
 
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+
+`npm run dev` builds the browser bundle with `scripts/build.mjs` and serves the generated `dist` directory at http://localhost:3000.
+
+For a typecheck without starting the server:
+
+`npm run lint`
 
 ## Build an Android APK
 
