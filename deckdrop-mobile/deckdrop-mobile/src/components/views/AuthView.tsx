@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
-import { UserProfile } from '../../types';
+import { supabase } from '../../lib/supabase/client';
+import { toUserProfile } from '../../lib/auth/profile';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
 export const AuthView: React.FC = () => {
@@ -15,6 +16,7 @@ export const AuthView: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setTab(currentScreen === 'register' ? 'register' : 'login');
@@ -26,18 +28,7 @@ export const AuthView: React.FC = () => {
     navigateTo(nextTab === 'login' ? 'login' : 'register');
   };
 
-  const createLocalUser = (name: string): UserProfile => ({
-    id: `usr-${Date.now()}`,
-    full_name: name,
-    email,
-    phone: '+63 917 000 0000',
-    role: 'customer',
-    status: 'active',
-    created_at: new Date().toISOString(),
-    reward_points: tab === 'register' ? 200 : 100,
-  });
-
-  const handleLogin = (event: React.FormEvent) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!email.trim() || !password) {
       setErrorMsg('Please enter your email and password.');
@@ -47,13 +38,25 @@ export const AuthView: React.FC = () => {
       setErrorMsg('Password must be at least 6 characters.');
       return;
     }
-    const user = createLocalUser(email.split('@')[0]);
+    setIsSubmitting(true);
+    setErrorMsg('');
+    const {data, error} = await supabase.auth.signInWithPassword({email: email.trim(), password});
+    setIsSubmitting(false);
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+    if (!data.user) {
+      setErrorMsg('Supabase did not return a signed-in user.');
+      return;
+    }
+    const user = toUserProfile(data.user);
     setCurrentUser(user);
     showToast(`Signed in as ${user.full_name}.`, 'success');
     navigateTo('home');
   };
 
-  const handleRegister = (event: React.FormEvent) => {
+  const handleRegister = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!fullName.trim() || !email.trim() || !password || !confirmPassword) {
       setErrorMsg('Please complete all required fields.');
@@ -71,7 +74,24 @@ export const AuthView: React.FC = () => {
       setErrorMsg('Please accept the terms to continue.');
       return;
     }
-    const user = createLocalUser(fullName.trim());
+    setIsSubmitting(true);
+    setErrorMsg('');
+    const {data, error} = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {data: {full_name: fullName.trim()}},
+    });
+    setIsSubmitting(false);
+    if (error) {
+      setErrorMsg(error.message);
+      return;
+    }
+    if (!data.session || !data.user) {
+      showToast('Check your email to confirm your account, then sign in.', 'info');
+      switchTab('login');
+      return;
+    }
+    const user = toUserProfile(data.user);
     setCurrentUser(user);
     showToast(`Welcome to Berry Co., ${user.full_name}.`, 'success');
     navigateTo('home');

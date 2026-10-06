@@ -11,33 +11,12 @@ import {
 } from 'lucide-react';
 import { ProductCardItem } from './HomeView';
 
-const CATEGORY_OPTIONS = ['Cards', 'Figurines'];
-const SERIES_OPTIONS = [
-  'Pokemon TCG',
-  'Magic The Gathering',
-  'Senran Kagura',
-  'One Piece',
-  "Miss Kobayashi's Dragon Maid",
-  'Uzaki-chan Wants to Hang Out!',
-];
-const TAG_OPTIONS = [
-  'Featured',
-  'New',
-  'Popular',
-  'Booster Box',
-  '1/7 Scale',
-  '1/8 Scale',
-  'Chibi',
-  'Rare',
-  '25th Anniversary',
-  'PSA 9 Graded',
-  'Sealed Display',
-];
-const BRAND_OPTIONS = ['Berry Co.'];
-
 export const CatalogView: React.FC = () => {
   const {
     products,
+    isProductsLoading,
+    productsError,
+    refreshProducts,
     filters,
     setFilters,
     resetFilters,
@@ -48,7 +27,11 @@ export const CatalogView: React.FC = () => {
   } = useStore();
 
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [sliderPrice, setSliderPrice] = useState(filters.maxPrice || 30000);
+  const priceSliderMax = Math.max(30000, Math.ceil(Math.max(0, ...products.map((product) => product.price)) / 500) * 500);
+  const categoryOptions = [...new Set(products.map((product) => product.category_name))].sort();
+  const seriesOptions = [...new Set(products.map((product) => product.series).filter((value): value is string => Boolean(value)))].sort();
+  const tagOptions = [...new Set(products.flatMap((product) => product.tags || []))].sort();
+  const brandOptions = [...new Set(products.map((product) => product.brand).filter((value): value is string => Boolean(value)))].sort();
 
   // Active filter count calculation
   const activeFiltersCount =
@@ -57,7 +40,7 @@ export const CatalogView: React.FC = () => {
     filters.series.length +
     filters.brands.length +
     filters.tags.length +
-    (filters.maxPrice < 30000 ? 1 : 0) +
+    (filters.maxPrice < priceSliderMax ? 1 : 0) +
     (filters.availability.length > 0 ? 1 : 0);
 
   // Filter and sort items
@@ -91,7 +74,7 @@ export const CatalogView: React.FC = () => {
         // Brand match
         if (
           filters.brands.length > 0 &&
-          !filters.brands.some((b) => (item.brand || '').toLowerCase() === (item.brand || '').toLowerCase())
+          !filters.brands.some((b) => (item.brand || '').toLowerCase() === b.toLowerCase())
         ) {
           return false;
         }
@@ -125,7 +108,7 @@ export const CatalogView: React.FC = () => {
       .sort((a, b) => {
         if (filters.sortBy === 'price-asc') return a.price - b.price;
         if (filters.sortBy === 'price-desc') return b.price - a.price;
-        if (filters.sortBy === 'newest') return b.id.localeCompare(a.id);
+        if (filters.sortBy === 'newest') return (b.created_at || '').localeCompare(a.created_at || '');
         return (b.featured ? 1 : 0) - (a.featured ? 1 : 0);
       });
   }, [products, filters]);
@@ -158,6 +141,16 @@ export const CatalogView: React.FC = () => {
       return {
         ...prev,
         tags: exists ? prev.tags.filter((t) => t !== tag) : [...prev.tags, tag],
+      };
+    });
+  };
+
+  const toggleBrand = (brand: string) => {
+    setFilters((prev) => {
+      const exists = prev.brands.includes(brand);
+      return {
+        ...prev,
+        brands: exists ? prev.brands.filter((item) => item !== brand) : [...prev.brands, brand],
       };
     });
   };
@@ -236,6 +229,18 @@ export const CatalogView: React.FC = () => {
             </span>
           ))}
 
+          {filters.brands.map((brand) => (
+            <span
+              key={brand}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#FAF5EB] text-[#35322E] text-[10px] font-bold border border-[#35322E]/15 shadow-2xs"
+            >
+              {brand}
+              <button onClick={() => toggleBrand(brand)} className="hover:text-[#E23B2E]">
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+
           {filters.tags.map((t) => (
             <span
               key={t}
@@ -261,7 +266,7 @@ export const CatalogView: React.FC = () => {
       {/* 📊 Sort Selector & Results Count */}
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs font-black text-[#35322E]">
-          {filteredProducts.length} Collectibles found
+          {isProductsLoading ? 'Loading collectibles…' : `${filteredProducts.length} Collectibles found`}
         </span>
 
         <div className="flex items-center gap-1 bg-[#FAF5EB] border border-[#35322E]/15 rounded-xl px-2.5 py-1">
@@ -286,31 +291,29 @@ export const CatalogView: React.FC = () => {
 
       {/* 📦 Products Grid */}
       {filteredProducts.length === 0 ? (
-        <div className="space-y-4 my-4">
-          <div className="bg-[#FAF5EB] rounded-3xl p-7 text-center space-y-3 border border-[#35322E]/10">
-          <p className="text-sm font-black text-[#35322E]">Your mobile catalog is ready</p>
-          <p className="text-xs text-[#35322E]/60">
-            Products added from the Berry Co. web inventory will appear in these slots automatically.
+        <div className="my-4 space-y-3 rounded-2xl border border-[#35322E]/10 bg-[#FAF5EB] p-6 text-center">
+          <p className="text-sm font-black text-[#35322E]">
+            {isProductsLoading ? 'Loading products from Berry Co....' : productsError ? 'Products could not be loaded' : products.length === 0 ? 'No products are available yet' : 'No products match these filters'}
           </p>
-          <button
-            type="button"
-            onClick={resetFilters}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#E23B2E] text-white text-xs font-black hover:bg-[#B82A20] transition"
-          >
-            <RotateCcw size={12} />
-            <span>Reset Filters</span>
-          </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div key={`catalog-slot-${index}`} className="aspect-[0.82] rounded-2xl border border-dashed border-[#35322E]/20 bg-[#FAF5EB] p-3 flex flex-col justify-between">
-                <div className="aspect-square rounded-xl bg-[#F3E4C8] border border-dashed border-[#35322E]/15 flex items-center justify-center text-[#35322E]/30">
-                  <span className="text-lg font-black">+</span>
-                </div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-[#35322E]/45">Product slot {index + 1}</p>
-              </div>
-            ))}
-          </div>
+          {productsError && <p role="alert" className="text-xs text-[#B82A20]">{productsError}</p>}
+          {productsError ? (
+            <button
+              type="button"
+              onClick={() => void refreshProducts()}
+              className="rounded-full bg-[#E23B2E] px-4 py-2 text-xs font-black text-white"
+            >
+              Try again
+            </button>
+          ) : !isProductsLoading && products.length > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#E23B2E] px-4 py-2 text-xs font-black text-white"
+            >
+              <RotateCcw size={12} />
+              <span>Reset Filters</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -356,7 +359,7 @@ export const CatalogView: React.FC = () => {
                 Category
               </label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORY_OPTIONS.map((cat) => {
+                {categoryOptions.map((cat) => {
                   const isSelected = filters.categories.includes(cat);
                   return (
                     <button
@@ -383,7 +386,7 @@ export const CatalogView: React.FC = () => {
                 Series & Universe
               </label>
               <div className="flex flex-wrap gap-2">
-                {SERIES_OPTIONS.map((ser) => {
+                {seriesOptions.map((ser) => {
                   const isSelected = filters.series.includes(ser);
                   return (
                     <button
@@ -410,7 +413,7 @@ export const CatalogView: React.FC = () => {
                 Tags & Status
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {TAG_OPTIONS.map((tag) => {
+                {tagOptions.map((tag) => {
                   const isSelected = filters.tags.includes(tag);
                   return (
                     <button
@@ -430,31 +433,54 @@ export const CatalogView: React.FC = () => {
               </div>
             </div>
 
+            {/* Brands */}
+            <div className="space-y-2">
+              <label className="text-xs font-black uppercase tracking-wider text-[#35322E]">
+                Brand
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {brandOptions.map((brand) => {
+                  const isSelected = filters.brands.includes(brand);
+                  return (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => toggleBrand(brand)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
+                        isSelected ? 'bg-[#E23B2E] text-white' : 'bg-[#F3E4C8] text-[#35322E] hover:bg-[#EAD0AA]'
+                      }`}
+                    >
+                      {brand}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Price Slider */}
             <div className="space-y-2">
               <div className="flex justify-between items-center text-xs font-bold text-[#35322E]">
                 <span className="uppercase tracking-wider">Max Price</span>
                 <span className="font-black text-[#E23B2E]">
-                  ₱{Number(sliderPrice).toLocaleString('en-PH')}
+                  ₱{Math.min(filters.maxPrice, priceSliderMax).toLocaleString('en-PH')}
                 </span>
               </div>
               <input
                 type="range"
                 min="500"
-                max="30000"
+                max={priceSliderMax}
                 step="500"
-                value={sliderPrice}
+                value={Math.min(filters.maxPrice, priceSliderMax)}
                 onChange={(e) => {
                   const val = Number(e.target.value);
-                  setSliderPrice(val);
                   setFilters((prev) => ({ ...prev, maxPrice: val }));
                 }}
                 className="w-full accent-[#E23B2E] cursor-pointer"
               />
               <div className="flex justify-between text-[10px] font-bold text-[#35322E]/50">
                 <span>₱500</span>
-                <span>₱15,000</span>
-                <span>₱30,000+</span>
+                <span>₱{Math.round(priceSliderMax / 2).toLocaleString('en-PH')}</span>
+                <span>₱{priceSliderMax.toLocaleString('en-PH')}+</span>
               </div>
             </div>
 
@@ -464,7 +490,6 @@ export const CatalogView: React.FC = () => {
                 type="button"
                 onClick={() => {
                   resetFilters();
-                  setSliderPrice(30000);
                 }}
                 className="flex-1 py-3 rounded-full bg-[#F3E4C8] text-[#35322E] font-extrabold text-xs hover:bg-[#EAD0AA] transition"
               >

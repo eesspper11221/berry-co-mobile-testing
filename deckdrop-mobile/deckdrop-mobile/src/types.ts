@@ -20,6 +20,7 @@ export interface Product {
   rating?: number;
   reviewsCount?: number;
   featured?: boolean;
+  created_at?: string;
 }
 
 export interface CartItem {

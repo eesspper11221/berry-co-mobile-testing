@@ -211,7 +211,7 @@ export const ProductDetailView: React.FC = () => {
               ₱{selectedProduct.price.toLocaleString('en-PH')}
             </span>
             <span className="text-xs font-bold text-[#35322E]/60">
-              VAT Inclusive · Flat ₱15 Metro Delivery
+              VAT Inclusive · Flat ₱120 Delivery
             </span>
           </div>
 

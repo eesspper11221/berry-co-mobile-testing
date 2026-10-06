@@ -12,8 +12,19 @@ import {
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
 
+const formatShippingAddress = (value: string) => {
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    return [parsed.address, parsed.city, parsed.province, parsed.postalCode, parsed.country]
+      .filter((part): part is string => typeof part === 'string' && part.length > 0)
+      .join(', ');
+  } catch {
+    return value;
+  }
+};
+
 export const OrderDetailView: React.FC = () => {
-  const { selectedOrder, navigateTo, updateOrderStatus, showToast } = useStore();
+  const { selectedOrder, navigateTo, showToast } = useStore();
 
   if (!selectedOrder) {
     return (
@@ -95,7 +106,7 @@ export const OrderDetailView: React.FC = () => {
             Delivery Progress
           </span>
           <span className="text-xs font-bold text-[#E23B2E] uppercase font-mono">
-            {selectedOrder.tracking_number || 'BC-PH-9921'}
+            {selectedOrder.tracking_number || 'Tracking pending'}
           </span>
         </div>
 
@@ -137,27 +148,6 @@ export const OrderDetailView: React.FC = () => {
           })}
         </div>
 
-        {/* Status Simulator for Testing */}
-        <div className="bg-[#F3E4C8] rounded-2xl p-3 space-y-2 border border-[#35322E]/10">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[#35322E]/70">
-            Testing Controls: Simulate Status Change
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {(['pending', 'processing', 'shipped', 'delivered'] as OrderStatus[]).map((st) => (
-              <button
-                key={st}
-                onClick={() => updateOrderStatus(selectedOrder.id, st)}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold capitalize transition ${
-                  selectedOrder.status === st
-                    ? 'bg-[#35322E] text-white shadow-2xs'
-                    : 'bg-[#FAF5EB] text-[#35322E] hover:bg-[#EAD0AA]'
-                }`}
-              >
-                Mark {st}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* 📦 Ordered Items */}
@@ -204,7 +194,7 @@ export const OrderDetailView: React.FC = () => {
           </div>
           <p className="text-[#35322E]/80 pl-5 leading-relaxed font-medium">
             {selectedOrder.customer_name} ({selectedOrder.customer_phone})<br />
-            {selectedOrder.shipping_address}
+            {formatShippingAddress(selectedOrder.shipping_address)}
           </p>
         </div>
 

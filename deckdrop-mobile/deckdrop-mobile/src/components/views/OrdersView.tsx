@@ -4,7 +4,14 @@ import { Package, ChevronRight, Clock, Truck, CheckCircle2, ShoppingBag } from '
 import { OrderStatus } from '../../types';
 
 export const OrdersView: React.FC = () => {
-  const { orders, navigateTo } = useStore();
+  const {
+    orders,
+    currentUser,
+    isOrdersLoading,
+    ordersError,
+    refreshOrders,
+    navigateTo,
+  } = useStore();
   const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
 
   const filteredOrders =
@@ -26,6 +33,32 @@ export const OrdersView: React.FC = () => {
         return { bg: 'bg-stone-200 text-stone-700 border-stone-300', icon: <Package size={12} />, label: 'Cancelled' };
     }
   };
+
+  if (isOrdersLoading) {
+    return <div className="px-4 py-12 text-center text-sm font-bold text-[#35322E]">Loading your orders...</div>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="px-4 py-12 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="w-20 h-20 rounded-full bg-[#F3E4C8] flex items-center justify-center text-[#35322E]/60"><Package size={36} /></div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-[#35322E]">Sign in to view your orders</h2>
+          <p className="text-xs font-semibold text-[#35322E]/70 max-w-[260px]">Your Berry Co. order history is private to your account.</p>
+        </div>
+        <button type="button" onClick={() => navigateTo('login')} className="rounded-full bg-[#E23B2E] px-6 py-3 text-xs font-extrabold text-white">Sign In</button>
+      </div>
+    );
+  }
+
+  if (ordersError) {
+    return (
+      <div className="px-4 py-12 text-center space-y-3">
+        <p role="alert" className="text-sm font-bold text-[#B82A20]">{ordersError}</p>
+        <button type="button" onClick={() => void refreshOrders()} className="rounded-full bg-[#E23B2E] px-5 py-2.5 text-xs font-extrabold text-white">Try again</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 px-4 pt-3 pb-8">
@@ -58,7 +91,7 @@ export const OrdersView: React.FC = () => {
       {filteredOrders.length === 0 ? (
         <div className="bg-[#FAF5EB] rounded-3xl p-8 text-center space-y-3 border border-[#35322E]/10 my-4">
           <Package size={36} className="mx-auto text-[#35322E]/40" />
-          <p className="text-sm font-black text-[#35322E]">No orders in this section</p>
+          <p className="text-sm font-black text-[#35322E]">{orders.length === 0 ? 'You do not have any orders yet.' : 'No orders in this section'}</p>
           <p className="text-xs text-[#35322E]/60">
             Check back after placing your collectible order.
           </p>

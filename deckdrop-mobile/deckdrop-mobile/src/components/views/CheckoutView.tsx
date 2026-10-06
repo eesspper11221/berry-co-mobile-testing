@@ -20,34 +20,41 @@ export const CheckoutView: React.FC = () => {
     navigateTo,
   } = useStore();
 
-  const [name, setName] = useState(currentUser?.full_name || 'Juan Dela Cruz');
-  const [email, setEmail] = useState(currentUser?.email || 'collector@berryco.ph');
-  const [phone, setPhone] = useState(currentUser?.phone || '+63 917 555 1234');
-  const [address, setAddress] = useState(
-    'Unit 402 Solstice Tower, Circuit Makati, Metro Manila'
-  );
-  const [paymentMethod, setPaymentMethod] = useState<'GCash' | 'Maya' | 'Cash on Delivery' | 'Credit Card'>('GCash');
+  const [name, setName] = useState(currentUser?.full_name || '');
+  const [email, setEmail] = useState(currentUser?.email || '');
+  const [phone, setPhone] = useState(currentUser?.phone || '');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [province, setProvince] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<'gcash' | 'card' | 'cod'>('gcash');
   const [orderConfirmed, setOrderConfirmed] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
-  const shippingFee = cart.length > 0 ? 15 : 0;
+  const shippingFee = cart.length > 0 ? 120 : 0;
   const total = cartTotal + shippingFee;
 
-  const handleSubmitOrder = (e: React.FormEvent) => {
+  const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      const newOrder = placeOrder({
+    setSubmitError('');
+    try {
+      const newOrder = await placeOrder({
         customer_name: name,
         customer_email: email,
         customer_phone: phone,
-        shipping_address: address,
+        shipping_address: [address, city, province, postalCode].filter(Boolean).join(', '),
+        shipping_details: {fullName: name, phone, address, city, province, postalCode, country: 'PH'},
         payment_method: paymentMethod,
+        shipping_fee: shippingFee,
       });
-      setIsSubmitting(false);
       setOrderConfirmed(newOrder);
-    }, 600);
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Order Confirmed Success Screen
@@ -83,7 +90,7 @@ export const CheckoutView: React.FC = () => {
               <span className="font-bold text-emerald-700">2-3 Business Days</span>
             </div>
             <div className="flex justify-between font-black text-sm pt-2 border-t border-[#35322E]/15">
-              <span>Total Paid:</span>
+              <span>Order Total:</span>
               <span className="text-[#E23B2E]">₱{orderConfirmed.total_amount.toLocaleString('en-PH')}</span>
             </div>
           </div>
@@ -111,7 +118,7 @@ export const CheckoutView: React.FC = () => {
     );
   }
 
-  if (cart.length === 0) {
+  if (cart.length === 0 && currentUser) {
     return (
       <div className="p-8 text-center space-y-4">
         <p className="text-sm font-bold text-[#35322E]">Your cart is empty</p>
@@ -121,6 +128,15 @@ export const CheckoutView: React.FC = () => {
         >
           Browse Catalog
         </button>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="px-4 py-12 text-center space-y-4">
+        <p className="text-sm font-bold text-[#35322E]">Sign in to continue to checkout.</p>
+        <button type="button" onClick={() => navigateTo('login')} className="rounded-full bg-[#E23B2E] px-5 py-2.5 text-xs font-black text-white">Sign In</button>
       </div>
     );
   }
@@ -157,7 +173,7 @@ export const CheckoutView: React.FC = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
                 <label className="block text-[11px] font-bold text-[#35322E]/80 mb-1">
                   Email
@@ -199,6 +215,21 @@ export const CheckoutView: React.FC = () => {
                 className="w-full bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl px-3 py-2 text-xs font-medium text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
               />
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <label className="block text-[11px] font-bold text-[#35322E]/80">
+                City
+                <input required value={city} onChange={(event) => setCity(event.target.value)} className="mt-1 w-full rounded-xl border border-[#35322E]/20 bg-[#F3E4C8] px-3 py-2 text-xs font-medium text-[#35322E] focus:border-[#E23B2E] focus:outline-none" />
+              </label>
+              <label className="block text-[11px] font-bold text-[#35322E]/80">
+                Province
+                <input required value={province} onChange={(event) => setProvince(event.target.value)} className="mt-1 w-full rounded-xl border border-[#35322E]/20 bg-[#F3E4C8] px-3 py-2 text-xs font-medium text-[#35322E] focus:border-[#E23B2E] focus:outline-none" />
+              </label>
+              <label className="block text-[11px] font-bold text-[#35322E]/80">
+                Postal Code
+                <input required value={postalCode} onChange={(event) => setPostalCode(event.target.value)} inputMode="numeric" className="mt-1 w-full rounded-xl border border-[#35322E]/20 bg-[#F3E4C8] px-3 py-2 text-xs font-medium text-[#35322E] focus:border-[#E23B2E] focus:outline-none" />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -213,10 +244,9 @@ export const CheckoutView: React.FC = () => {
 
           <div className="space-y-2">
             {[
-              { id: 'GCash', label: 'GCash E-Wallet', hint: 'Instant online mobile payment', icon: <Wallet size={16} className="text-blue-600" /> },
-              { id: 'Maya', label: 'Maya (PayMaya)', hint: 'Scan QR or wallet balance', icon: <Wallet size={16} className="text-emerald-600" /> },
-              { id: 'Credit Card', label: 'Credit / Debit Card', hint: 'Visa, Mastercard, JCB', icon: <CreditCard size={16} className="text-[#E23B2E]" /> },
-              { id: 'Cash on Delivery', label: 'Cash on Delivery (COD)', hint: 'Pay upon parcel handover', icon: <Truck size={16} className="text-stone-700" /> },
+              { id: 'gcash', label: 'GCash E-Wallet', hint: 'Mobile wallet payment', icon: <Wallet size={16} className="text-blue-600" /> },
+              { id: 'card', label: 'Credit / Debit Card', hint: 'Card payment', icon: <CreditCard size={16} className="text-[#E23B2E]" /> },
+              { id: 'cod', label: 'Cash on Delivery', hint: 'Pay upon delivery', icon: <Truck size={16} className="text-stone-700" /> },
             ].map((method) => {
               const isSelected = paymentMethod === method.id;
               return (
@@ -251,6 +281,8 @@ export const CheckoutView: React.FC = () => {
           </div>
         </div>
 
+        {submitError && <p role="alert" className="rounded-xl border border-[#E23B2E]/30 bg-[#E23B2E]/10 px-3 py-2.5 text-xs font-bold text-[#B82A20]">{submitError}</p>}
+
         {/* 3️⃣ Summary & Confirm */}
         <div className="bg-[#FAF5EB] rounded-3xl p-5 border border-[#35322E]/10 shadow-xs space-y-3">
           <h2 className="text-xs font-black uppercase tracking-wider text-[#35322E] border-b border-[#35322E]/10 pb-2">
@@ -275,7 +307,7 @@ export const CheckoutView: React.FC = () => {
             </div>
             <div className="flex justify-between text-[#35322E]/70 font-semibold">
               <span>Delivery Fee</span>
-              <span>₱{shippingFee}</span>
+              <span>₱{shippingFee.toLocaleString('en-PH')}</span>
             </div>
             <div className="flex justify-between font-black text-sm text-[#35322E] pt-1">
               <span>Total Payable</span>
@@ -288,13 +320,13 @@ export const CheckoutView: React.FC = () => {
             disabled={isSubmitting}
             className="w-full py-3.5 rounded-full bg-[#E23B2E] hover:bg-[#B82A20] text-white font-extrabold text-xs transition active:scale-95 shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
           >
-            <span>{isSubmitting ? 'Confirming Order...' : `Pay ₱${total.toLocaleString('en-PH')} & Place Order`}</span>
+            <span>{isSubmitting ? 'Submitting Order...' : `Place Order · ₱${total.toLocaleString('en-PH')}`}</span>
             <ArrowRight size={15} />
           </button>
 
           <div className="flex items-center justify-center gap-1.5 text-[10px] font-bold text-[#35322E]/60">
             <ShieldCheck size={13} className="text-emerald-700" />
-            <span>Buyer Protection & Verified Prototype Storage</span>
+            <span>Secure order processing</span>
           </div>
         </div>
       </form>

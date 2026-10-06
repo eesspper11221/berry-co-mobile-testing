@@ -3,9 +3,46 @@ import { useStore } from '../../context/StoreContext';
 import { Heart, ShoppingBag, Trash2, ArrowRight } from 'lucide-react';
 
 export const WishlistView: React.FC = () => {
-  const { wishlist, products, addToCart, toggleWishlist, clearWishlist, navigateTo } = useStore();
+  const {
+    wishlist,
+    products,
+    currentUser,
+    isWishlistLoading,
+    wishlistError,
+    refreshWishlist,
+    addToCart,
+    toggleWishlist,
+    clearWishlist,
+    navigateTo,
+  } = useStore();
 
   const wishlistedProducts = products.filter((p) => wishlist.includes(p.id));
+
+  if (isWishlistLoading) {
+    return <div className="px-4 py-12 text-center text-sm font-bold text-[#35322E]">Loading your wishlist...</div>;
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="px-4 py-12 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="w-20 h-20 rounded-full bg-[#F3E4C8] flex items-center justify-center text-[#35322E]/60"><Heart size={36} /></div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-[#35322E]">Sign in to view your wishlist</h2>
+          <p className="text-xs font-semibold text-[#35322E]/70 max-w-[260px]">Your saved collectibles stay with your Berry Co. account.</p>
+        </div>
+        <button type="button" onClick={() => navigateTo('login')} className="rounded-full bg-[#E23B2E] px-6 py-3 text-xs font-extrabold text-white">Sign In</button>
+      </div>
+    );
+  }
+
+  if (wishlistError) {
+    return (
+      <div className="px-4 py-12 text-center space-y-3">
+        <p role="alert" className="text-sm font-bold text-[#B82A20]">{wishlistError}</p>
+        <button type="button" onClick={() => void refreshWishlist()} className="rounded-full bg-[#E23B2E] px-5 py-2.5 text-xs font-extrabold text-white">Try again</button>
+      </div>
+    );
+  }
 
   if (wishlistedProducts.length === 0) {
     return (

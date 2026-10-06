@@ -1,36 +1,47 @@
-import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
-import { ShoppingBag, Trash2, ArrowRight, Tag, ShieldCheck } from 'lucide-react';
+import { ShoppingBag, Trash2, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export const CartView: React.FC = () => {
   const {
     cart,
+    isCartLoading,
+    cartError,
+    refreshCart,
+    currentUser,
     updateCartQuantity,
     removeFromCart,
     cartTotal,
     navigateTo,
-    showToast,
   } = useStore();
 
-  const [promoCode, setPromoCode] = useState('');
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const shippingFee = cart.length > 0 ? 120 : 0;
+  const finalTotal = cartTotal + shippingFee;
 
-  const handleApplyPromo = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (promoCode.trim().toUpperCase() === 'BERRY10') {
-      setDiscountPercent(10);
-      showToast('10% Berry VIP discount applied!', 'success');
-    } else if (promoCode.trim().toUpperCase() === 'FREESHIP') {
-      setDiscountPercent(5);
-      showToast('Special discount applied!', 'success');
-    } else {
-      showToast('Invalid promo code. Try "BERRY10"', 'error');
-    }
-  };
+  if (isCartLoading) {
+    return <div className="px-4 py-12 text-center text-sm font-bold text-[#35322E]">Loading your cart...</div>;
+  }
 
-  const discountAmount = Math.round((cartTotal * discountPercent) / 100);
-  const shippingFee = cart.length > 0 ? 15 : 0;
-  const finalTotal = Math.max(0, cartTotal - discountAmount + shippingFee);
+  if (!currentUser) {
+    return (
+      <div className="px-4 py-12 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="w-20 h-20 rounded-full bg-[#F3E4C8] flex items-center justify-center text-[#35322E]/60"><ShoppingBag size={36} /></div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-[#35322E]">Sign in to view your cart</h2>
+          <p className="text-xs font-semibold text-[#35322E]/70 max-w-[260px]">Your cart is saved to your Berry Co. account.</p>
+        </div>
+        <button type="button" onClick={() => navigateTo('login')} className="rounded-full bg-[#E23B2E] px-6 py-3 text-xs font-extrabold text-white">Sign In</button>
+      </div>
+    );
+  }
+
+  if (cartError) {
+    return (
+      <div className="px-4 py-12 text-center space-y-3">
+        <p role="alert" className="text-sm font-bold text-[#B82A20]">{cartError}</p>
+        <button type="button" onClick={() => void refreshCart()} className="rounded-full bg-[#E23B2E] px-5 py-2.5 text-xs font-extrabold text-white">Try again</button>
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
@@ -132,34 +143,6 @@ export const CartView: React.FC = () => {
         ))}
       </div>
 
-      {/* 🏷️ Voucher / Promo Code */}
-      <div className="bg-[#FAF5EB] rounded-2xl p-3 border border-[#35322E]/10 space-y-2">
-        <div className="flex items-center gap-1.5 text-xs font-extrabold text-[#35322E]">
-          <Tag size={14} className="text-[#E23B2E]" />
-          <span>Promo Code</span>
-        </div>
-        <form onSubmit={handleApplyPromo} className="flex gap-2">
-          <input
-            type="text"
-            value={promoCode}
-            onChange={(e) => setPromoCode(e.target.value)}
-            placeholder="Try 'BERRY10'"
-            className="flex-1 bg-[#F3E4C8] border border-[#35322E]/20 rounded-xl px-3 py-2 text-xs font-semibold uppercase text-[#35322E] focus:outline-none focus:border-[#E23B2E]"
-          />
-          <button
-            type="submit"
-            className="px-4 py-2 rounded-xl bg-[#35322E] text-white text-xs font-black hover:bg-[#E23B2E] transition"
-          >
-            Apply
-          </button>
-        </form>
-        {discountPercent > 0 && (
-          <p className="text-[11px] font-bold text-emerald-700">
-            ✓ {discountPercent}% discount activated!
-          </p>
-        )}
-      </div>
-
       {/* 🧾 Order Summary Card */}
       <div className="bg-[#FAF5EB] rounded-3xl p-5 border border-[#35322E]/10 shadow-xs space-y-3">
         <h2 className="text-sm font-black text-[#35322E] border-b border-[#35322E]/10 pb-2">
@@ -173,13 +156,6 @@ export const CartView: React.FC = () => {
               ₱{cartTotal.toLocaleString('en-PH')}
             </span>
           </div>
-
-          {discountAmount > 0 && (
-            <div className="flex justify-between text-emerald-700 font-bold">
-              <span>VIP Discount</span>
-              <span>-₱{discountAmount.toLocaleString('en-PH')}</span>
-            </div>
-          )}
 
           <div className="flex justify-between">
             <span>Estimated Shipping</span>

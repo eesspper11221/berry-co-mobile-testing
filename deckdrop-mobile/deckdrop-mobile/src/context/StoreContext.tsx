@@ -1,6 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { supabase } from '../lib/supabase/client';
+import { toUserProfile } from '../lib/auth/profile';
+import { addUserCartItem, fetchUserCart, removeUserCartItem, updateUserCartItem } from '../lib/repositories/cart';
+import { fetchUserOrders } from '../lib/repositories/orders';
+import { fetchProducts } from '../lib/repositories/products';
+import { addUserWishlistItem, clearUserWishlist, fetchUserWishlist, removeUserWishlistItem } from '../lib/repositories/wishlist';
 import { Product, CartItem, Order, OrderItem, UserProfile, ScreenType, FilterOptions } from '../types';
-import { INITIAL_PRODUCTS, INITIAL_ORDERS, DEMO_USERS } from '../data/mockData';
+import { INITIAL_PRODUCTS, DEMO_USERS } from '../data/mockData';
 
 interface ToastMessage {
   id: string;
@@ -17,6 +23,9 @@ interface StoreContextType {
   
   // Products & Catalog
   products: Product[];
+  isProductsLoading: boolean;
+  productsError: string | null;
+  refreshProducts: () => Promise<void>;
   selectedProduct: Product | null;
   addProduct: (product: Omit<Product, 'id'>) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -25,6 +34,9 @@ interface StoreContextType {
 
   // Cart
   cart: CartItem[];
+  isCartLoading: boolean;
+  cartError: string | null;
+  refreshCart: () => Promise<void>;
   addToCart: (product: Product, quantity?: number) => void;
   updateCartQuantity: (itemId: string, delta: number) => void;
   removeFromCart: (itemId: string) => void;
@@ -34,12 +46,18 @@ interface StoreContextType {
 
   // Wishlist
   wishlist: string[]; // product IDs
-  toggleWishlist: (productId: string) => void;
-  clearWishlist: () => void;
+  isWishlistLoading: boolean;
+  wishlistError: string | null;
+  refreshWishlist: () => Promise<void>;
+  toggleWishlist: (productId: string) => Promise<void>;
+  clearWishlist: () => Promise<void>;
   isWishlisted: (productId: string) => boolean;
 
   // Orders
   orders: Order[];
+  isOrdersLoading: boolean;
+  ordersError: string | null;
+  refreshOrders: () => Promise<void>;
   selectedOrder: Order | null;
   placeOrder: (details: {
     customer_name: string;
@@ -47,14 +65,23 @@ interface StoreContextType {
     customer_phone: string;
     shipping_address: string;
     payment_method: string;
-  }) => Order;
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+    shipping_details?: {
+      fullName: string;
+      phone: string;
+      address: string;
+      city: string;
+      province: string;
+      postalCode: string;
+      country: string;
+    };
+    shipping_fee?: number;
+  }) => Promise<Order>;
 
   // Auth & Profile
   currentUser: UserProfile | null;
   setCurrentUser: (user: UserProfile | null) => void;
   loginDemo: (account: 'juan' | 'maria') => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 
   // Filters & Search
   filters: FilterOptions;
@@ -78,7 +105,7 @@ const DEFAULT_FILTERS: FilterOptions = {
   tags: [],
   availability: [],
   minPrice: 0,
-  maxPrice: 30000,
+  maxPrice: Number.MAX_SAFE_INTEGER,
   sortBy: 'featured',
 };
 
@@ -96,26 +123,62 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
   });
+  const [isProductsLoading, setIsProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
 
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const saved = localStorage.getItem('deckdrop_orders');
-    return saved ? JSON.parse(saved) : INITIAL_ORDERS;
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isOrdersLoading, setIsOrdersLoading] = useState(true);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    const saved = localStorage.getItem('deckdrop_cart');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [isCartLoading, setIsCartLoading] = useState(true);
+  const [cartError, setCartError] = useState<string | null>(null);
 
-  const [wishlist, setWishlist] = useState<string[]>(() => {
-    const saved = localStorage.getItem('deckdrop_wishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [isWishlistLoading, setIsWishlistLoading] = useState(true);
+  const [wishlistError, setWishlistError] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('deckdrop_user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  const refreshProducts = async () => {
+    setIsProductsLoading(true);
+    setProductsError(null);
+    try {
+      setProducts(await fetchProducts());
+    } catch (error) {
+      setProductsError(error instanceof Error ? error.message : 'Unable to load products.');
+    } finally {
+      setIsProductsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshProducts();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const {data: {subscription}} = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session ? toUserProfile(session.user) : null);
+      setIsAuthReady(true);
+    });
+
+    void supabase.auth.getSession().then(({data, error}) => {
+      if (isMounted) {
+        if (!error) setCurrentUser(data.session ? toUserProfile(data.session.user) : null);
+        setIsAuthReady(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Screen & Navigation
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
@@ -135,18 +198,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     localStorage.setItem('deckdrop_products', JSON.stringify(products));
   }, [products]);
-
-  useEffect(() => {
-    localStorage.setItem('deckdrop_orders', JSON.stringify(orders));
-  }, [orders]);
-
-  useEffect(() => {
-    localStorage.setItem('deckdrop_cart', JSON.stringify(cart));
-  }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem('deckdrop_wishlist', JSON.stringify(wishlist));
-  }, [wishlist]);
 
   useEffect(() => {
     if (currentUser) {
@@ -196,54 +247,110 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   // Cart operations
-  const addToCart = (product: Product, quantity = 1) => {
+  const refreshCart = async () => {
+    if (!currentUser) {
+      setCart([]);
+      setCartError(null);
+      setIsCartLoading(false);
+      return;
+    }
+    setIsCartLoading(true);
+    setCartError(null);
+    try {
+      setCart(await fetchUserCart(currentUser.id, products));
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : 'Unable to load your cart.');
+    } finally {
+      setIsCartLoading(false);
+    }
+  };
+
+  const refreshWishlist = async () => {
+    if (!currentUser) {
+      setWishlist([]);
+      setWishlistError(null);
+      setIsWishlistLoading(false);
+      return;
+    }
+    setIsWishlistLoading(true);
+    setWishlistError(null);
+    try {
+      setWishlist(await fetchUserWishlist(currentUser.id));
+    } catch (error) {
+      setWishlistError(error instanceof Error ? error.message : 'Unable to load your wishlist.');
+    } finally {
+      setIsWishlistLoading(false);
+    }
+  };
+
+  const refreshOrders = async () => {
+    if (!currentUser) {
+      setOrders([]);
+      setOrdersError(null);
+      setIsOrdersLoading(false);
+      return;
+    }
+    setIsOrdersLoading(true);
+    setOrdersError(null);
+    try {
+      setOrders(await fetchUserOrders(currentUser.id));
+    } catch (error) {
+      setOrdersError(error instanceof Error ? error.message : 'Unable to load your orders.');
+    } finally {
+      setIsOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthReady) void refreshCart();
+  }, [isAuthReady, currentUser?.id, products]);
+
+  useEffect(() => {
+    if (!isAuthReady) return;
+    void refreshWishlist();
+    void refreshOrders();
+  }, [isAuthReady, currentUser?.id]);
+
+  const addToCart = async (product: Product, quantity = 1) => {
+    if (!currentUser) {
+      showToast('Sign in to save items to your cart.', 'info');
+      navigateTo('login');
+      return;
+    }
     if (product.stock <= 0) {
       showToast(`${product.name} is currently out of stock.`, 'error');
       return;
     }
-
-    setCart((prev) => {
-      const existing = prev.find((item) => item.productId === product.id);
-      if (existing) {
-        const newQty = Math.min(product.stock, existing.quantity + quantity);
-        return prev.map((item) =>
-          item.productId === product.id ? { ...item, quantity: newQty } : item
-        );
-      } else {
-        const newItem: CartItem = {
-          id: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`,
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: Math.min(product.stock, quantity),
-          image_url: product.image_url,
-          category_name: product.category_name,
-          stock: product.stock,
-        };
-        return [...prev, newItem];
-      }
-    });
-
-    showToast(`Added "${product.name.slice(0, 22)}..." to cart!`, 'success');
+    try {
+      await addUserCartItem(currentUser.id, product.id, quantity);
+      await refreshCart();
+      showToast(`Added "${product.name.slice(0, 22)}..." to cart!`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to add this item.', 'error');
+    }
   };
 
-  const updateCartQuantity = (itemId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.id === itemId) {
-            const nextQty = item.quantity + delta;
-            return nextQty > 0 ? { ...item, quantity: Math.min(item.stock, nextQty) } : null;
-          }
-          return item;
-        })
-        .filter((item): item is CartItem => item !== null)
-    );
+  const updateCartQuantity = async (itemId: string, delta: number) => {
+    if (!currentUser) return;
+    const item = cart.find((cartItem) => cartItem.id === itemId);
+    if (!item) return;
+    try {
+      await updateUserCartItem(currentUser.id, itemId, item.quantity + delta);
+      await refreshCart();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update your cart.', 'error');
+    }
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart((prev) => prev.filter((item) => item.id !== itemId));
-    showToast('Item removed from cart.', 'info');
+  const removeFromCart = async (itemId: string) => {
+    if (!currentUser) return;
+    try {
+      await removeUserCartItem(currentUser.id, itemId);
+      await refreshCart();
+      showToast('Item removed from cart.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to remove this item.', 'error');
+    }
   };
 
   const clearCart = () => setCart([]);
@@ -259,92 +366,137 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   );
 
   // Wishlist operations
-  const toggleWishlist = (productId: string) => {
-    const product = products.find((p) => p.id === productId);
-    setWishlist((prev) => {
-      const exists = prev.includes(productId);
-      if (exists) {
-        showToast(`Removed from Wishlist.`, 'info');
-        return prev.filter((id) => id !== productId);
+  const toggleWishlist = async (productId: string) => {
+    if (!currentUser) {
+      showToast('Sign in to save items to your wishlist.', 'info');
+      navigateTo('login');
+      return;
+    }
+    try {
+      if (wishlist.includes(productId)) {
+        await removeUserWishlistItem(currentUser.id, productId);
+        showToast('Removed from wishlist.', 'info');
       } else {
-        showToast(`Saved to Wishlist!`, 'success');
-        return [...prev, productId];
+        await addUserWishlistItem(currentUser.id, productId);
+        showToast('Saved to wishlist.', 'success');
       }
-    });
+      await refreshWishlist();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to update your wishlist.', 'error');
+    }
   };
 
   const isWishlisted = (productId: string) => wishlist.includes(productId);
 
-  const clearWishlist = () => {
-    setWishlist([]);
-    showToast('Wishlist cleared.', 'info');
+  const clearWishlist = async () => {
+    if (!currentUser) return;
+    try {
+      await clearUserWishlist(currentUser.id);
+      await refreshWishlist();
+      showToast('Wishlist cleared.', 'info');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to clear your wishlist.', 'error');
+    }
   };
 
   // Orders
-  const placeOrder = (details: {
+  const placeOrder = async (details: {
     customer_name: string;
     customer_email: string;
     customer_phone: string;
     shipping_address: string;
+    shipping_details?: {
+      fullName: string;
+      phone: string;
+      address: string;
+      city: string;
+      province: string;
+      postalCode: string;
+      country: string;
+    };
     payment_method: string;
-  }): Order => {
-    const subtotal = cartTotal;
-    const shipping_fee = subtotal > 0 ? 15 : 0;
-    const total_amount = subtotal + shipping_fee;
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    shipping_fee?: number;
+  }): Promise<Order> => {
+    if (!currentUser || cart.length === 0) throw new Error('Sign in and add items before checkout.');
+    const {data: {user}, error: authError} = await supabase.auth.getUser();
+    if (authError || !user || user.id !== currentUser.id) {
+      throw new Error('Please sign in again before checkout.');
+    }
 
-    const orderItems: OrderItem[] = cart.map((ci) => ({
-      id: `oi-${Date.now()}-${ci.productId}`,
-      productId: ci.productId,
-      product_name: ci.name,
-      price: ci.price,
-      quantity: ci.quantity,
-      image_url: ci.image_url,
-    }));
+    const shippingDetails = details.shipping_details || {
+      fullName: details.customer_name,
+      phone: details.customer_phone,
+      address: details.shipping_address,
+      city: '',
+      province: '',
+      postalCode: '',
+      country: 'PH',
+    };
+    const {data, error} = await supabase.rpc('checkout_cart', {
+      p_shipping_address: shippingDetails,
+      p_payment_method: details.payment_method,
+      p_shipping_fee: details.shipping_fee ?? 120,
+      p_selected_item_ids: null,
+    });
+    if (error || !data) throw new Error(error?.message || 'Unable to create your order.');
 
+    const result = data as {order?: Record<string, unknown>} & Record<string, unknown>;
+    const orderData = (result.order || result) as Record<string, unknown>;
+    const orderId = String(orderData.id || '');
+    if (!orderId) throw new Error('The checkout response did not include an order ID.');
+    const addressData = (orderData.shippingAddress || orderData.shipping_address || shippingDetails) as Record<string, unknown>;
+    const orderAddress = typeof addressData === 'string'
+      ? addressData
+      : [addressData.fullName, addressData.address, addressData.city, addressData.province, addressData.postalCode, addressData.country]
+          .filter((part) => typeof part === 'string' && part.length > 0)
+          .join(', ');
+    const returnedItems = orderData.items || orderData.order_items;
+    const orderItems: OrderItem[] = Array.isArray(returnedItems) && returnedItems.length > 0
+      ? returnedItems.map((item, index) => {
+          const row = item as Record<string, unknown>;
+          return {
+            id: String(row.id || `order-item-${index}`),
+            productId: String(row.productId || row.product_id || ''),
+            product_name: String(row.productNameSnapshot || row.product_name || row.product_name_snapshot || 'Product'),
+            price: Number(row.unitPrice || row.price || row.unit_price || 0),
+            quantity: Number(row.quantity || 0),
+            image_url: typeof row.image_url === 'string' ? row.image_url : undefined,
+          };
+        })
+      : cart.map((item) => ({
+          id: `order-item-${item.id}`,
+          productId: item.productId,
+          product_name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image_url: item.image_url,
+        }));
+    const rawPaymentStatus = String(orderData.paymentStatus || orderData.payment_status || 'pending').toLowerCase();
     const newOrder: Order = {
-      id: `ord-${Date.now()}`,
-      order_number: `BC-${randomNum}`,
-      created_at: new Date().toISOString(),
-      customer_name: details.customer_name || currentUser?.full_name || 'Valued Collector',
-      customer_email: details.customer_email || currentUser?.email || 'collector@berryco.ph',
-      customer_phone: details.customer_phone || '+63 917 000 0000',
-      shipping_address: details.shipping_address || 'Metro Manila, Philippines',
-      status: 'pending',
-      payment_status: details.payment_method === 'Cash on Delivery' ? 'pending' : 'paid',
-      payment_method: details.payment_method,
+      id: orderId,
+      order_number: String(orderData.orderNumber || orderData.order_number || orderId),
+      created_at: String(orderData.createdAt || orderData.created_at || new Date().toISOString()),
+      customer_name: String(orderData.customerName || orderData.customer_name || details.customer_name),
+      customer_email: String(orderData.customerEmail || orderData.customer_email || details.customer_email),
+      customer_phone: String(orderData.customerPhone || orderData.customer_phone || details.customer_phone),
+      shipping_address: orderAddress,
+      status: String(orderData.status || 'pending').toLowerCase() as Order['status'],
+      payment_status: rawPaymentStatus === 'paid' ? 'paid' : rawPaymentStatus === 'refunded' ? 'refunded' : 'pending',
+      payment_method: String(orderData.paymentMethod || orderData.payment_method || details.payment_method),
       items: orderItems,
-      subtotal,
-      shipping_fee,
-      total_amount,
-      tracking_number: `BC-TRACK-${randomNum}`,
+      subtotal: Number(orderData.subtotal ?? cartTotal),
+      shipping_fee: Number(orderData.shippingFee ?? orderData.shipping_fee ?? details.shipping_fee ?? 120),
+      total_amount: Number(orderData.total ?? orderData.total_amount ?? orderData.totalAmount ?? cartTotal + (details.shipping_fee ?? 120)),
+      tracking_number: typeof orderData.trackingNumber === 'string' ? orderData.trackingNumber : typeof orderData.tracking_number === 'string' ? orderData.tracking_number : undefined,
     };
 
-    // Decrease product stock
-    setProducts((prev) =>
-      prev.map((prod) => {
-        const boughtItem = cart.find((ci) => ci.productId === prod.id);
-        if (boughtItem) {
-          const newStock = Math.max(0, prod.stock - boughtItem.quantity);
-          const newStatus =
-            newStock === 0 ? 'out_of_stock' : newStock <= 3 ? 'low_stock' : 'active';
-          return { ...prod, stock: newStock, status: newStatus };
-        }
-        return prod;
-      })
-    );
-
-    setOrders((prev) => [newOrder, ...prev]);
+    setOrders((previous) => [newOrder, ...previous]);
     clearCart();
-    showToast(`Order #${newOrder.order_number} confirmed! 🎉`, 'success');
+    await refreshCart();
+    await refreshOrders();
+    await refreshProducts();
+    showToast(`Order #${newOrder.order_number} received.`, 'success');
     return newOrder;
-  };
-
-  const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status } : ord))
-    );
-    showToast(`Order status updated to ${status}.`, 'info');
   };
 
   // Product mutations (Admin)
@@ -394,9 +546,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     navigateTo('home');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const {error} = await supabase.auth.signOut();
+    if (error) {
+      showToast(error.message, 'error');
+      return;
+    }
     setCurrentUser(null);
-    showToast('Signed out of Deckdrop.', 'info');
+    showToast('Signed out of Berry Co.', 'info');
     navigateTo('home');
   };
 
@@ -412,12 +569,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedProductId,
         selectedOrderId,
         products,
+        isProductsLoading,
+        productsError,
+        refreshProducts,
         selectedProduct,
         addProduct,
         updateProduct,
         deleteProduct,
         adjustStock,
         cart,
+        isCartLoading,
+        cartError,
+        refreshCart,
         addToCart,
         updateCartQuantity,
         removeFromCart,
@@ -425,13 +588,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         cartTotal,
         cartCount,
         wishlist,
+        isWishlistLoading,
+        wishlistError,
+        refreshWishlist,
         toggleWishlist,
         clearWishlist,
         isWishlisted,
         orders,
+        isOrdersLoading,
+        ordersError,
+        refreshOrders,
         selectedOrder,
         placeOrder,
-        updateOrderStatus,
         currentUser,
         setCurrentUser,
         loginDemo,

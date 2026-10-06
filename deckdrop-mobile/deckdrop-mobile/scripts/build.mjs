@@ -2,15 +2,27 @@ import {execFileSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import dotenv from 'dotenv';
 import esbuild from 'esbuild';
 
 const projectDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distDirectory = path.join(projectDirectory, 'dist');
 const assetsDirectory = path.join(distDirectory, 'assets');
 const publicDirectory = path.join(projectDirectory, 'public');
+const envFile = path.join(projectDirectory, '.env.local');
 const tailwindCommand = process.platform === 'win32'
   ? path.join(projectDirectory, 'node_modules', '.bin', 'tailwindcss.cmd')
   : path.join(projectDirectory, 'node_modules', '.bin', 'tailwindcss');
+
+if (fs.existsSync(envFile)) {
+  dotenv.config({path: envFile});
+}
+
+const supabaseUrl = process.env.BERRYCO_SUPABASE_URL;
+const supabasePublishableKey = process.env.BERRYCO_SUPABASE_PUBLISHABLE_KEY;
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error('Set BERRYCO_SUPABASE_URL and BERRYCO_SUPABASE_PUBLISHABLE_KEY in .env.local before building.');
+}
 
 fs.rmSync(distDirectory, {recursive: true, force: true});
 fs.mkdirSync(assetsDirectory, {recursive: true});
@@ -24,6 +36,10 @@ await esbuild.build({
   format: 'esm',
   outfile: path.join(assetsDirectory, 'index.js'),
   platform: 'browser',
+  define: {
+    __BERRYCO_SUPABASE_URL__: JSON.stringify(supabaseUrl),
+    __BERRYCO_SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(supabasePublishableKey),
+  },
   plugins: [{
     name: 'ignore-css-imports',
     setup(build) {

@@ -38,7 +38,7 @@ export const HomeView: React.FC = () => {
   }, []);
 
   const featuredProducts = products.filter((p) => p.featured);
-  const categories = ['All', 'Cards', 'Figurines', 'Pokemon TCG', 'Magic The Gathering', 'Senran Kagura'];
+  const categories = ['All', ...new Set(products.map((product) => product.category_name))];
   const [selectedCat, setSelectedCat] = useState('All');
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -56,11 +56,8 @@ export const HomeView: React.FC = () => {
     if (cat === 'All') {
       setFilters((prev) => ({ ...prev, categories: [], series: [] }));
       navigateTo('catalog');
-    } else if (cat === 'Cards' || cat === 'Figurines') {
-      setFilters((prev) => ({ ...prev, categories: [cat], series: [] }));
-      navigateTo('catalog');
     } else {
-      setFilters((prev) => ({ ...prev, series: [cat], categories: [] }));
+      setFilters((prev) => ({ ...prev, categories: [cat], series: [] }));
       navigateTo('catalog');
     }
   };
@@ -68,9 +65,7 @@ export const HomeView: React.FC = () => {
   const displayedProducts =
     selectedCat === 'All'
       ? products
-      : selectedCat === 'Cards' || selectedCat === 'Figurines'
-      ? products.filter((p) => p.category_name.toLowerCase() === selectedCat.toLowerCase())
-      : products.filter((p) => (p.series || '').toLowerCase().includes(selectedCat.toLowerCase()));
+      : products.filter((p) => p.category_name.toLowerCase() === selectedCat.toLowerCase());
 
   return (
     <div className="space-y-4 pb-8">
@@ -386,7 +381,7 @@ export const HomeView: React.FC = () => {
               <Truck size={18} />
             </div>
             <div>
-              <h4 className="text-xs font-extrabold text-[#35322E]">Flat ₱15 Metro Delivery</h4>
+              <h4 className="text-xs font-extrabold text-[#35322E]">Flat ₱120 Delivery</h4>
               <p className="text-[10px] font-medium text-[#35322E]/70">
                 Bubble wrapped with hard casing protections.
               </p>

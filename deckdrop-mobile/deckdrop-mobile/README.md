@@ -8,6 +8,7 @@ The project uses a custom esbuild and Tailwind build script with a small Express
 
 **Prerequisites:** Node.js 20 or newer
 
+Create `.env.local` using `.env.example` as a template and provide the Supabase project URL and public anon/publishable key. The build injects these client values into the browser bundle; never put a service-role key in this app.
 
 1. Install dependencies:
    `npm install`
