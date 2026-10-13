@@ -1,1 +1,6 @@
-{}
+{
+	"private": true,
+	"scripts": {
+		"dev": "npm --prefix deckdrop-mobile/deckdrop-mobile run dev"
+	}
+}

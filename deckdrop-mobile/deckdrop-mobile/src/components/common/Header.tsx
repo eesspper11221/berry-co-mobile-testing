@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../../context/StoreContext';
-import { ShoppingBag, Heart, Search, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, Heart, Search, ArrowLeft, MessageSquareText } from 'lucide-react';
 import { BerryCoLogo } from './BerryCoLogo';
 
 export const Header: React.FC = () => {
@@ -9,6 +9,7 @@ export const Header: React.FC = () => {
     navigateTo,
     cartCount,
     wishlist,
+    currentUser,
   } = useStore();
 
   const isSubPage = [
@@ -64,6 +65,19 @@ export const Header: React.FC = () => {
 
         {/* Right Side: Quick Action Icons */}
         <div className="flex items-center gap-1.5">
+          {currentUser && !['login', 'register'].includes(currentScreen) && (
+            <button
+              id="header-support-button"
+              type="button"
+              onClick={() => navigateTo('support')}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition active:scale-95 cursor-pointer ${currentScreen === 'support' ? 'bg-[#E23B2E] text-white' : 'bg-[#F3E4C8] hover:bg-[#EAD0AA] text-[#35322E]'}`}
+              aria-label="Customer support"
+              title="Customer support"
+            >
+              <MessageSquareText size={17} />
+            </button>
+          )}
+
           {/* Quick Search Button */}
           {currentScreen !== 'catalog' && (
             <button

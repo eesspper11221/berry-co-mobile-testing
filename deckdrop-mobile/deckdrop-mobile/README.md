@@ -10,6 +10,8 @@ The project uses a custom esbuild and Tailwind build script with a small Express
 
 Create `.env.local` using `.env.example` as a template and provide the Supabase project URL and public anon/publishable key. The build injects these client values into the browser bundle; never put a service-role key in this app.
 
+Customer Support currently runs in demo mode. Sample tickets, submissions, and replies are held in screen state only and are not sent to a backend or saved between app launches.
+
 1. Install dependencies:
    `npm install`
 2. Run the app:

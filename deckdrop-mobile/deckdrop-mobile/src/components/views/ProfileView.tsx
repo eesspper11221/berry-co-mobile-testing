@@ -11,6 +11,7 @@ import {
   Phone,
   Calendar,
   Layers,
+  MessageSquareText,
 } from 'lucide-react';
 import { BerryCoLogo } from '../common/BerryCoLogo';
 
@@ -192,6 +193,23 @@ export const ProfileView: React.FC = () => {
             <div>
               <p className="text-xs font-black text-[#35322E]">My Shopping Cart</p>
               <p className="text-[10px] font-semibold text-[#35322E]/60">Checkout pending items</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-[#35322E]/40" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigateTo('support')}
+          className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-[#F3E4C8] transition text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#F3E4C8] flex items-center justify-center text-[#E23B2E]">
+              <MessageSquareText size={16} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-[#35322E]">Customer Support</p>
+              <p className="text-[10px] font-semibold text-[#35322E]/60">Submit a ticket or track replies</p>
             </div>
           </div>
           <ChevronRight size={16} className="text-[#35322E]/40" />

@@ -15,6 +15,7 @@ import { OrdersView } from './components/views/OrdersView';
 import { OrderDetailView } from './components/views/OrderDetailView';
 import { WishlistView } from './components/views/WishlistView';
 import { ProfileView } from './components/views/ProfileView';
+import { SupportView } from './components/views/SupportView';
 import { AuthView } from './components/views/AuthView';
 
 const MainScreenRouter: React.FC = () => {
@@ -40,6 +41,8 @@ const MainScreenRouter: React.FC = () => {
         return <WishlistView />;
       case 'profile':
         return <ProfileView />;
+      case 'support':
+        return <SupportView />;
       case 'login':
       case 'register':
         return <AuthView />;

@@ -11,7 +11,8 @@
     "android:open": "npx cap open android",
     "android:build": "npm run mobile:sync && cd android && gradlew.bat assembleDebug",
     "preview": "node server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "tsx --test src/data/supportTickets.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",
@@ -30,7 +31,7 @@
     "@tailwindcss/cli": "^4.3.3",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
-    "@types/react": "^19.0.0",
+    "@types/react": "^19.3.0",
     "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.21",
     "daisyui": "^5.7.28",

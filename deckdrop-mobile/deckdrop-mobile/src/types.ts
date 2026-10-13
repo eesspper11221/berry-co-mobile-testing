@@ -82,6 +82,7 @@ export type ScreenType =
   | 'orders'
   | 'order-detail'
   | 'wishlist'
+  | 'support'
   | 'profile'
   | 'login'
   | 'register';
