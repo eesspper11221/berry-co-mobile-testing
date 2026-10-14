@@ -1,9 +1,11 @@
 import React from 'react';
+import { Capacitor } from '@capacitor/core';
 import { useStore } from '../../context/StoreContext';
 import { Smartphone, Maximize2, Sparkles, RotateCcw } from 'lucide-react';
 
 export const MobileFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isPhoneFrame, setIsPhoneFrame, showToast } = useStore();
+  const isNativeApp = Capacitor.isNativePlatform();
 
   const resetAllTestingData = () => {
     localStorage.clear();
@@ -54,21 +56,21 @@ export const MobileFrame: React.FC<{ children: React.ReactNode }> = ({ children 
             : 'max-w-md min-h-[100dvh] flex flex-col bg-[#EAD0AA] shadow-xl'
         }`}
       >
-        {/* Smartphone Status Bar on Phone Mockup */}
-        <div className="bg-[#FAF5EB] text-[#35322E] px-6 pt-3 pb-1 flex items-center justify-between text-xs font-black select-none shrink-0 border-b border-[#35322E]/5">
-          <span>9:41</span>
-          {/* Dynamic Island Pill */}
-          <div className="w-20 h-4 bg-stone-900 rounded-full flex items-center justify-center">
-            <span className="w-2 h-2 rounded-full bg-stone-800 ml-6" />
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <span>5G</span>
-            <span className="text-[10px]">100%</span>
-            <div className="w-5 h-2.5 border border-[#35322E] rounded-xs p-0.5 flex items-center">
-              <div className="h-full w-full bg-[#35322E] rounded-2xs" />
+        {!isNativeApp && (
+          <div className="bg-[#FAF5EB] text-[#35322E] px-6 pt-3 pb-1 flex items-center justify-between text-xs font-black select-none shrink-0 border-b border-[#35322E]/5">
+            <span>9:41</span>
+            <div className="w-20 h-4 bg-stone-900 rounded-full flex items-center justify-center">
+              <span className="w-2 h-2 rounded-full bg-stone-800 ml-6" />
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px]">
+              <span>5G</span>
+              <span className="text-[10px]">100%</span>
+              <div className="w-5 h-2.5 border border-[#35322E] rounded-xs p-0.5 flex items-center">
+                <div className="h-full w-full bg-[#35322E] rounded-2xs" />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Scrollable Viewport Container */}
         <div
@@ -78,10 +80,11 @@ export const MobileFrame: React.FC<{ children: React.ReactNode }> = ({ children 
           {children}
         </div>
 
-        {/* Phone Home Bar Indicator */}
-        <div className="bg-[#FAF5EB] py-1 flex justify-center shrink-0">
-          <div className="w-32 h-1 bg-[#35322E]/30 rounded-full" />
-        </div>
+        {!isNativeApp && (
+          <div className="bg-[#FAF5EB] py-1 flex justify-center shrink-0">
+            <div className="w-32 h-1 bg-[#35322E]/30 rounded-full" />
+          </div>
+        )}
       </div>
     </div>
   );

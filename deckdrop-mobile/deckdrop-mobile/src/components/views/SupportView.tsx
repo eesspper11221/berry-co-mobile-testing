@@ -1,13 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, LifeBuoy, LoaderCircle, MessageSquareText, RotateCcw, Send } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import {
-  appendDemoReply,
-  createDemoTicket,
-  createDemoTickets,
   type SupportCategory,
   type SupportTicket,
 } from '../../data/supportTickets';
+import {
+  addUserSupportTicketReply,
+  createUserSupportTicket,
+  fetchUserSupportTickets,
+} from '../../lib/repositories/supportTickets';
 
 type SupportMode = 'submit' | 'track';
 const categories: { value: SupportCategory; label: string }[] = [
@@ -37,22 +39,57 @@ export const SupportView: React.FC = () => {
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tickets, setTickets] = useState<SupportTicket[]>(() => currentUser
-    ? createDemoTickets({ id: currentUser.id, name: currentUser.full_name, email: currentUser.email })
-    : []);
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(true);
+  const [ticketLoadError, setTicketLoadError] = useState('');
   const [selectedTicketId, setSelectedTicketId] = useState('');
   const [reply, setReply] = useState('');
   const [replyError, setReplyError] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
+  const ticketRequestId = useRef(0);
 
   useEffect(() => {
     setName(currentUser?.full_name || '');
     setEmail(currentUser?.email || '');
-    if (currentUser) {
-      const demoTickets = createDemoTickets({ id: currentUser.id, name: currentUser.full_name, email: currentUser.email });
-      setTickets(demoTickets);
-      setSelectedTicketId(demoTickets[0]?.id || '');
-    }
   }, [currentUser?.id, currentUser?.full_name, currentUser?.email]);
+
+  const refreshTickets = useCallback(async () => {
+    const requestId = ++ticketRequestId.current;
+    const userId = currentUser?.id;
+    if (!userId) {
+      setTickets([]);
+      setSelectedTicketId('');
+      setIsLoadingTickets(false);
+      return;
+    }
+
+    setIsLoadingTickets(true);
+    setTicketLoadError('');
+    try {
+      const loadedTickets = await fetchUserSupportTickets(userId);
+      if (requestId !== ticketRequestId.current) return;
+      setTickets(loadedTickets);
+      setSelectedTicketId((selectedId) => (
+        loadedTickets.some((ticket) => ticket.id === selectedId)
+          ? selectedId
+          : loadedTickets[0]?.id || ''
+      ));
+    } catch (error) {
+      if (requestId !== ticketRequestId.current) return;
+      setTicketLoadError(error instanceof Error ? error.message : 'Unable to load your support tickets.');
+    } finally {
+      if (requestId === ticketRequestId.current) setIsLoadingTickets(false);
+    }
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    setTickets([]);
+    setSelectedTicketId('');
+    void refreshTickets();
+    return () => {
+      ticketRequestId.current += 1;
+    };
+  }, [refreshTickets]);
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || null;
 
@@ -74,41 +111,46 @@ export const SupportView: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
-    const customer = { id: currentUser.id, name: name.trim(), email: email.trim() };
-    const ticket = createDemoTicket(customer, {
+    try {
+      const ticket = await createUserSupportTicket(currentUser.id, name, email, {
         category,
         orderNumber,
         subject,
         message,
-    });
-    setSubmitSuccess(`Demo ticket ${ticket.ticket_number} was added to this session.`);
-    setSubject('');
-    setMessage('');
-    setOrderNumber('');
-    setTickets((existingTickets) => [ticket, ...existingTickets]);
-    setSelectedTicketId(ticket.id);
-    setIsSubmitting(false);
+      });
+      setSubmitSuccess(`Ticket ${ticket.ticket_number} was sent to Berry Co. Support.`);
+      setSubject('');
+      setMessage('');
+      setOrderNumber('');
+      setSelectedTicketId(ticket.id);
+      await refreshTickets();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Unable to submit your support ticket.');
+      await refreshTickets();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const resetDemoTickets = () => {
-    if (!currentUser) return;
-    const demoTickets = createDemoTickets({ id: currentUser.id, name: currentUser.full_name, email: currentUser.email });
-    setTickets(demoTickets);
-    setSelectedTicketId(demoTickets[0]?.id || '');
-    setReply('');
-    setReplyError('');
-  };
-
-  const handleReply = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleReply = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedTicket || !reply.trim()) return;
     setReplyError('');
-    const customer = { id: currentUser!.id, name: currentUser!.full_name, email: currentUser!.email };
-    setTickets((existingTickets) => existingTickets.map((ticket) => ticket.id === selectedTicket.id
-      ? appendDemoReply(ticket, customer, reply)
-      : ticket));
-    setReply('');
+    setIsSendingReply(true);
+    try {
+      await addUserSupportTicketReply(
+        selectedTicket.id,
+        currentUser!.full_name,
+        currentUser!.email,
+        reply,
+      );
+      setReply('');
+      await refreshTickets();
+    } catch (error) {
+      setReplyError(error instanceof Error ? error.message : 'Unable to send your reply.');
+    } finally {
+      setIsSendingReply(false);
+    }
   };
 
   if (!currentUser) {
@@ -128,10 +170,6 @@ export const SupportView: React.FC = () => {
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#E23B2E]">Account</p>
         <h1 className="text-xl font-black text-[#35322E]">Customer Support</h1>
         <p className="text-xs font-medium text-[#35322E]/60">Send a request or continue a ticket conversation.</p>
-      </div>
-
-      <div role="status" className="rounded-xl border border-amber-500/25 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-900">
-        Demo mode: tickets and replies are temporary and are not sent to Berry Co. Support.
       </div>
 
       <div className="grid grid-cols-2 rounded-xl bg-[#F3E4C8] p-1" role="tablist" aria-label="Support options">
@@ -180,10 +218,20 @@ export const SupportView: React.FC = () => {
       ) : (
         <section className="space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <div><h2 className="text-base font-black text-[#35322E]">Example tickets</h2><p className="text-xs text-[#35322E]/60">Demo view for {currentUser.email}</p></div>
-            <button type="button" onClick={resetDemoTickets} className="inline-flex items-center gap-1.5 rounded-full bg-[#F3E4C8] px-3.5 py-2 text-xs font-extrabold text-[#35322E]"><RotateCcw size={13} />Reset</button>
+            <div><h2 className="text-base font-black text-[#35322E]">Your submitted tickets</h2><p className="text-xs text-[#35322E]/60">Ticket updates for {currentUser.email}</p></div>
+            <button type="button" onClick={() => void refreshTickets()} disabled={isLoadingTickets} className="inline-flex items-center gap-1.5 rounded-full bg-[#F3E4C8] px-3.5 py-2 text-xs font-extrabold text-[#35322E] disabled:opacity-50"><RotateCcw size={13} className={isLoadingTickets ? 'animate-spin' : ''} />Refresh</button>
           </div>
-          {tickets.length === 0 ? (
+          {ticketLoadError && <InlineNotice message={ticketLoadError} />}
+          {isLoadingTickets ? (
+            <div className="rounded-2xl border border-[#35322E]/10 bg-[#FAF5EB] px-4 py-10 text-center text-sm text-[#35322E]/60">
+              <LoaderCircle size={22} className="mx-auto animate-spin text-[#E23B2E]" />
+              <p className="mt-3">Loading your support tickets...</p>
+            </div>
+          ) : ticketLoadError ? (
+            <div className="rounded-2xl border border-[#35322E]/10 bg-[#FAF5EB] px-4 py-10 text-center text-sm text-[#35322E]/60">
+              <p>Your tickets could not be loaded. Refresh to try again.</p>
+            </div>
+          ) : tickets.length === 0 ? (
             <div className="rounded-2xl border border-[#35322E]/10 bg-[#FAF5EB] px-4 py-10 text-center">
               <LifeBuoy size={30} className="mx-auto text-[#35322E]/40" />
               <p className="mt-3 text-sm font-black text-[#35322E]">No support tickets yet</p>
@@ -221,7 +269,7 @@ export const SupportView: React.FC = () => {
                     {replyError && <InlineNotice message={replyError} />}
                     <label className="sr-only" htmlFor="support-reply">Reply to support</label>
                     <textarea id="support-reply" rows={3} value={reply} onChange={(event) => setReply(event.target.value)} className="w-full resize-y rounded-xl border border-[#35322E]/15 bg-white px-3 py-2.5 text-xs text-[#35322E] outline-none focus:border-[#E23B2E]" placeholder="Write a reply..." />
-                    <button type="submit" disabled={!reply.trim()} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#E23B2E] px-4 py-2 text-xs font-black text-white disabled:opacity-50"><Send size={14} />Add demo reply</button>
+                    <button type="submit" disabled={!reply.trim() || isSendingReply} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#E23B2E] px-4 py-2 text-xs font-black text-white disabled:opacity-50">{isSendingReply ? <LoaderCircle size={14} className="animate-spin" /> : <Send size={14} />}{isSendingReply ? 'Sending...' : 'Send reply'}</button>
                   </form>
                 </article>
               )}

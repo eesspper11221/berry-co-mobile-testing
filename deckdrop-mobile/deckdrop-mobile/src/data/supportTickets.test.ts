@@ -1,38 +1,62 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { appendDemoReply, createDemoTicket, createDemoTickets } from './supportTickets';
+import { mapSupportTicket } from './supportTickets';
 
-const customer = { id: 'user-1', name: 'Juan Dela Cruz', email: 'juan@example.com' };
+const ticket = {
+  id: 'ticket-1',
+  ticket_number: 'TICK-12345',
+  user_id: 'user-1',
+  customer_name: 'Juan Dela Cruz',
+  customer_email: 'juan@example.com',
+  category: 'order-status',
+  order_number: 'BC-12345',
+  subject: 'Order update',
+  status: 'open',
+  created_at: '2026-10-13T12:00:00.000Z',
+  message: 'Please share an update.',
+};
 
-test('sample data includes customer and support conversation messages for the current user', () => {
-  const tickets = createDemoTickets(customer);
-  assert.equal(tickets.length, 2);
-  assert.ok(tickets.every((ticket) => ticket.user_id === customer.id));
-  assert.ok(tickets[0].messages.some((message) => !message.isCustomer));
+test('maps a support ticket and customer/admin conversation from Supabase rows', () => {
+  const mapped = mapSupportTicket(ticket, [
+    {
+      id: 'message-1',
+      ticket_id: ticket.id,
+      sender_type: 'customer',
+      sender_name: ticket.customer_name,
+      sender_email: ticket.customer_email,
+      message: 'Please share an update.',
+      created_at: ticket.created_at,
+    },
+    {
+      id: 'message-2',
+      ticket_id: ticket.id,
+      sender_type: 'admin',
+      sender_name: 'Berry Co. Support',
+      sender_email: null,
+      message: 'Your order is being prepared.',
+      created_at: '2026-10-13T13:00:00.000Z',
+    },
+  ]);
+
+  assert.equal(mapped.ticket_number, 'TICK-12345');
+  assert.equal(mapped.user_id, 'user-1');
+  assert.equal(mapped.messages.length, 2);
+  assert.equal(mapped.messages[0].body, 'Please share an update.');
+  assert.equal(mapped.messages[0].isCustomer, true);
+  assert.equal(mapped.messages[1].author, 'Berry Co. Support');
+  assert.equal(mapped.messages[1].isCustomer, false);
 });
 
-test('local submission creates a demo ticket with trimmed fields and opening message', () => {
-  const ticket = createDemoTicket(customer, {
-    category: 'general',
-    orderNumber: '  BC-12345  ',
-    subject: '  Question  ',
-    message: '  Can you help?  ',
-  }, '2026-10-13T12:00:00.000Z');
+test('supports message rows that expose their content as body', () => {
+  const mapped = mapSupportTicket(ticket, [{
+    id: 'message-1',
+    ticket_id: ticket.id,
+    sender_type: 'customer',
+    sender_name: ticket.customer_name,
+    sender_email: ticket.customer_email,
+    body: 'A reply from the customer.',
+    created_at: ticket.created_at,
+  }]);
 
-  assert.equal(ticket.user_id, customer.id);
-  assert.equal(ticket.order_number, 'BC-12345');
-  assert.equal(ticket.subject, 'Question');
-  assert.equal(ticket.message, 'Can you help?');
-  assert.equal(ticket.messages[0].body, 'Can you help?');
-  assert.equal(ticket.messages[0].isCustomer, true);
-});
-
-test('local customer reply appends a message without changing ticket ownership', () => {
-  const [ticket] = createDemoTickets(customer);
-  const updated = appendDemoReply(ticket, customer, '  Thanks for the update.  ', '2026-10-13T12:00:00.000Z');
-
-  assert.equal(updated.user_id, customer.id);
-  assert.equal(updated.status, 'pending');
-  assert.equal(updated.messages.at(-1)?.body, 'Thanks for the update.');
-  assert.equal(updated.messages.at(-1)?.isCustomer, true);
+  assert.equal(mapped.messages[0].body, 'A reply from the customer.');
 });
