@@ -10,7 +10,15 @@ The project uses a custom esbuild and Tailwind build script with a small Express
 
 Create `.env.local` using `.env.example` as a template and provide the Supabase project URL and public anon/publishable key. The build injects these client values into the browser bundle; never put a service-role key in this app.
 
+Online checkout uses PayMongo-hosted checkout sessions for GCash and card payments. Configure `BERRYCO_PAYMONGO_SECRET_KEY` with a **test** secret key in `.env.local`; it is read only by the Express server and must never be added to the client build. Keep `BERRYCO_SUPABASE_SERVICE_ROLE_KEY` server-side as well. Configure a PayMongo webhook pointing to `/api/payments/paymongo/webhook`, subscribe to `checkout_session.payment.paid`, and set its signing secret as `BERRYCO_PAYMONGO_WEBHOOK_SECRET` so successful payments update `orders.payment_status` in Supabase. `BERRYCO_SITE_URL` must be the public storefront URL used for PayMongo return redirects. For Android builds, set `BERRYCO_API_BASE_URL` to the reachable server URL (for example, the computer's LAN address during local device testing); do not use `localhost` on a physical device. Add any deployed storefront origin not already covered by `BERRYCO_SITE_URL` to the comma-separated `BERRYCO_ALLOWED_ORIGINS`.
+
+Cash on delivery continues to create a pending order without opening PayMongo. Online payment failures leave the Supabase order pending and provide a retry action.
+
 Customer Support is available to signed-in customers from the Account screen. Customers can submit tickets, track tickets created for their account, read support replies, and respond through the existing Supabase `support_tickets` and `support_ticket_messages` tables. Administrative ticket management remains on the website.
+
+Customer ticket conversations subscribe to new `support_ticket_messages` inserts through Supabase Realtime while the Track tickets view is open, and silently refresh every 10 seconds as a fallback. For immediate updates, enable the `support_ticket_messages` table in the Supabase `supabase_realtime` publication and ensure signed-in customers have a SELECT policy limited to messages belonging to their own tickets. The fallback polling still shows replies if Realtime publication is not enabled.
+
+Customers can select individual cart products or select all before checkout. The order summary and checkout RPC use only the selected cart rows; unselected products remain in the cart.
 
 1. Install dependencies:
    `npm install`

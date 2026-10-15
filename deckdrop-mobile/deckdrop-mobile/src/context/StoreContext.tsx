@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase/client';
 import { toUserProfile } from '../lib/auth/profile';
 import { addUserCartItem, fetchUserCart, removeUserCartItem, updateUserCartItem } from '../lib/repositories/cart';
@@ -34,6 +34,11 @@ interface StoreContextType {
 
   // Cart
   cart: CartItem[];
+  selectedCartItemIds: string[];
+  selectedCartItems: CartItem[];
+  selectedCartTotal: number;
+  toggleCartItemSelection: (itemId: string) => void;
+  selectAllCartItems: (selected: boolean) => void;
   isCartLoading: boolean;
   cartError: string | null;
   refreshCart: () => Promise<void>;
@@ -75,6 +80,7 @@ interface StoreContextType {
       country: string;
     };
     shipping_fee?: number;
+    selected_item_ids?: string[];
   }) => Promise<Order>;
 
   // Auth & Profile
@@ -131,6 +137,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [ordersError, setOrdersError] = useState<string | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
+  const cartSelectionUserId = useRef<string | null>(null);
+  const previousCartItemIds = useRef(new Set<string>());
+  const hasInitializedCartSelection = useRef(false);
   const [isCartLoading, setIsCartLoading] = useState(true);
   const [cartError, setCartError] = useState<string | null>(null);
 
@@ -250,6 +260,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refreshCart = async () => {
     if (!currentUser) {
       setCart([]);
+      setSelectedCartItemIds([]);
+      cartSelectionUserId.current = null;
+      previousCartItemIds.current = new Set();
+      hasInitializedCartSelection.current = false;
       setCartError(null);
       setIsCartLoading(false);
       return;
@@ -257,7 +271,23 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsCartLoading(true);
     setCartError(null);
     try {
-      setCart(await fetchUserCart(currentUser.id, products));
+      const loadedCart = await fetchUserCart(currentUser.id, products);
+      if (cartSelectionUserId.current !== currentUser.id) {
+        cartSelectionUserId.current = currentUser.id;
+        previousCartItemIds.current = new Set();
+        hasInitializedCartSelection.current = false;
+      }
+      const loadedItemIds = loadedCart.map((item) => item.id);
+      const isInitialSelection = !hasInitializedCartSelection.current;
+      hasInitializedCartSelection.current = true;
+      const previousIdSet = previousCartItemIds.current;
+      setSelectedCartItemIds((selectedIds) => {
+        if (isInitialSelection) return loadedItemIds;
+        const selectedIdSet = new Set(selectedIds);
+        return loadedItemIds.filter((id) => selectedIdSet.has(id) || !previousIdSet.has(id));
+      });
+      previousCartItemIds.current = new Set(loadedItemIds);
+      setCart(loadedCart);
     } catch (error) {
       setCartError(error instanceof Error ? error.message : 'Unable to load your cart.');
     } finally {
@@ -365,6 +395,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [cart]
   );
 
+  const selectedCartItems = useMemo(
+    () => cart.filter((item) => selectedCartItemIds.includes(item.id)),
+    [cart, selectedCartItemIds]
+  );
+
+  const selectedCartTotal = useMemo(
+    () => selectedCartItems.reduce((total, item) => total + item.price * item.quantity, 0),
+    [selectedCartItems]
+  );
+
+  const toggleCartItemSelection = (itemId: string) => {
+    setSelectedCartItemIds((selectedIds) => selectedIds.includes(itemId)
+      ? selectedIds.filter((id) => id !== itemId)
+      : [...selectedIds, itemId]);
+  };
+
+  const selectAllCartItems = (selected: boolean) => {
+    setSelectedCartItemIds(selected ? cart.map((item) => item.id) : []);
+  };
+
   // Wishlist operations
   const toggleWishlist = async (productId: string) => {
     if (!currentUser) {
@@ -416,8 +466,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     payment_method: string;
     shipping_fee?: number;
+    selected_item_ids?: string[];
   }): Promise<Order> => {
-    if (!currentUser || cart.length === 0) throw new Error('Sign in and add items before checkout.');
+    const checkoutItems = details.selected_item_ids
+      ? cart.filter((item) => details.selected_item_ids?.includes(item.id))
+      : cart;
+    if (!currentUser || checkoutItems.length === 0) throw new Error('Select at least one cart item before checkout.');
+    const checkoutSubtotal = checkoutItems.reduce((total, item) => total + item.price * item.quantity, 0);
     const {data: {user}, error: authError} = await supabase.auth.getUser();
     if (authError || !user || user.id !== currentUser.id) {
       throw new Error('Please sign in again before checkout.');
@@ -436,7 +491,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       p_shipping_address: shippingDetails,
       p_payment_method: details.payment_method,
       p_shipping_fee: details.shipping_fee ?? 120,
-      p_selected_item_ids: null,
+      p_selected_item_ids: details.selected_item_ids ?? null,
     });
     if (error || !data) throw new Error(error?.message || 'Unable to create your order.');
 
@@ -463,7 +518,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             image_url: typeof row.image_url === 'string' ? row.image_url : undefined,
           };
         })
-      : cart.map((item) => ({
+      : checkoutItems.map((item) => ({
           id: `order-item-${item.id}`,
           productId: item.productId,
           product_name: item.name,
@@ -484,9 +539,9 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       payment_status: rawPaymentStatus === 'paid' ? 'paid' : rawPaymentStatus === 'refunded' ? 'refunded' : 'pending',
       payment_method: String(orderData.paymentMethod || orderData.payment_method || details.payment_method),
       items: orderItems,
-      subtotal: Number(orderData.subtotal ?? cartTotal),
+      subtotal: Number(orderData.subtotal ?? checkoutSubtotal),
       shipping_fee: Number(orderData.shippingFee ?? orderData.shipping_fee ?? details.shipping_fee ?? 120),
-      total_amount: Number(orderData.total ?? orderData.total_amount ?? orderData.totalAmount ?? cartTotal + (details.shipping_fee ?? 120)),
+      total_amount: Number(orderData.total ?? orderData.total_amount ?? orderData.totalAmount ?? checkoutSubtotal + (details.shipping_fee ?? 120)),
       tracking_number: typeof orderData.trackingNumber === 'string' ? orderData.trackingNumber : typeof orderData.tracking_number === 'string' ? orderData.tracking_number : undefined,
     };
 
@@ -578,6 +633,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         deleteProduct,
         adjustStock,
         cart,
+        selectedCartItemIds,
+        selectedCartItems,
+        selectedCartTotal,
+        toggleCartItemSelection,
+        selectAllCartItems,
         isCartLoading,
         cartError,
         refreshCart,

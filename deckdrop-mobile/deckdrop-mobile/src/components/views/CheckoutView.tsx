@@ -10,11 +10,13 @@ import {
   Package,
 } from 'lucide-react';
 import { Order } from '../../types';
+import { createPayMongoCheckoutSession } from '../../lib/payments/paymongo';
 
 export const CheckoutView: React.FC = () => {
   const {
-    cart,
-    cartTotal,
+    selectedCartItemIds,
+    selectedCartItems,
+    selectedCartTotal,
     placeOrder,
     currentUser,
     navigateTo,
@@ -31,9 +33,24 @@ export const CheckoutView: React.FC = () => {
   const [orderConfirmed, setOrderConfirmed] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
 
-  const shippingFee = cart.length > 0 ? 120 : 0;
-  const total = cartTotal + shippingFee;
+  const redirectToPayment = async (order: Order) => {
+    setIsRedirectingToPayment(true);
+    setSubmitError('');
+    try {
+      const session = await createPayMongoCheckoutSession(order.id, paymentMethod as 'gcash' | 'card');
+      window.location.assign(session.checkoutUrl);
+    } catch (error) {
+      setOrderConfirmed(order);
+      setSubmitError(error instanceof Error ? error.message : 'Unable to start payment.');
+    } finally {
+      setIsRedirectingToPayment(false);
+    }
+  };
+
+  const shippingFee = selectedCartItems.length > 0 ? 120 : 0;
+  const total = selectedCartTotal + shippingFee;
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +65,13 @@ export const CheckoutView: React.FC = () => {
         shipping_details: {fullName: name, phone, address, city, province, postalCode, country: 'PH'},
         payment_method: paymentMethod,
         shipping_fee: shippingFee,
+        selected_item_ids: selectedCartItemIds,
       });
-      setOrderConfirmed(newOrder);
+      if (paymentMethod === 'gcash' || paymentMethod === 'card') {
+        await redirectToPayment(newOrder);
+      } else {
+        setOrderConfirmed(newOrder);
+      }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
     } finally {
@@ -72,7 +94,7 @@ export const CheckoutView: React.FC = () => {
             </span>
             <h1 className="text-xl font-black text-[#35322E]">Thank you for your order!</h1>
             <p className="text-xs font-semibold text-[#35322E]/70">
-              Order <span className="font-bold text-[#35322E]">#{orderConfirmed.order_number}</span> has been received and is being prepared for dispatch.
+              Order <span className="font-bold text-[#35322E]">#{orderConfirmed.order_number}</span> {orderConfirmed.payment_status === 'paid' ? 'has been paid and is being prepared for dispatch.' : 'has been received and is awaiting payment.'}
             </p>
           </div>
 
@@ -96,6 +118,21 @@ export const CheckoutView: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-2 pt-2">
+            {submitError && (
+              <p role="alert" className="rounded-xl border border-[#E23B2E]/30 bg-[#E23B2E]/10 px-3 py-2.5 text-xs font-bold text-[#B82A20]">
+                Payment was not started: {submitError}
+              </p>
+            )}
+            {submitError && orderConfirmed.payment_method !== 'cod' && (
+              <button
+                type="button"
+                disabled={isRedirectingToPayment}
+                onClick={() => void redirectToPayment(orderConfirmed)}
+                className="w-full py-3 rounded-full bg-[#E23B2E] text-white font-extrabold text-xs disabled:opacity-50"
+              >
+                {isRedirectingToPayment ? 'Connecting to PayMongo...' : 'Retry Payment'}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => navigateTo('order-detail', { orderId: orderConfirmed.id })}
@@ -118,7 +155,7 @@ export const CheckoutView: React.FC = () => {
     );
   }
 
-  if (cart.length === 0 && currentUser) {
+  if (selectedCartItems.length === 0 && currentUser) {
     return (
       <div className="p-8 text-center space-y-4">
         <p className="text-sm font-bold text-[#35322E]">Your cart is empty</p>
@@ -290,7 +327,7 @@ export const CheckoutView: React.FC = () => {
           </h2>
 
           <div className="space-y-1.5 text-xs text-[#35322E]">
-            {cart.map((item) => (
+            {selectedCartItems.map((item) => (
               <div key={item.id} className="flex justify-between text-[11px] text-[#35322E]/80">
                 <span className="truncate max-w-[200px]">
                   {item.quantity}x {item.name}
@@ -303,7 +340,7 @@ export const CheckoutView: React.FC = () => {
           <div className="pt-2 border-t border-[#35322E]/10 space-y-1 text-xs">
             <div className="flex justify-between text-[#35322E]/70 font-semibold">
               <span>Subtotal</span>
-              <span>₱{cartTotal.toLocaleString('en-PH')}</span>
+              <span>₱{selectedCartTotal.toLocaleString('en-PH')}</span>
             </div>
             <div className="flex justify-between text-[#35322E]/70 font-semibold">
               <span>Delivery Fee</span>
@@ -320,7 +357,7 @@ export const CheckoutView: React.FC = () => {
             disabled={isSubmitting}
             className="w-full py-3.5 rounded-full bg-[#E23B2E] hover:bg-[#B82A20] text-white font-extrabold text-xs transition active:scale-95 shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 mt-2"
           >
-            <span>{isSubmitting ? 'Submitting Order...' : `Place Order · ₱${total.toLocaleString('en-PH')}`}</span>
+            <span>{isSubmitting || isRedirectingToPayment ? 'Connecting to PayMongo...' : `Place Order · ₱${total.toLocaleString('en-PH')}`}</span>
             <ArrowRight size={15} />
           </button>
 

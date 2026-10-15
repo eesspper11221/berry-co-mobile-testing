@@ -4,18 +4,23 @@ import { ShoppingBag, Trash2, ArrowRight, ShieldCheck } from 'lucide-react';
 export const CartView: React.FC = () => {
   const {
     cart,
+    selectedCartItemIds,
+    selectedCartItems,
+    selectedCartTotal,
+    toggleCartItemSelection,
+    selectAllCartItems,
     isCartLoading,
     cartError,
     refreshCart,
     currentUser,
     updateCartQuantity,
     removeFromCart,
-    cartTotal,
     navigateTo,
   } = useStore();
 
-  const shippingFee = cart.length > 0 ? 120 : 0;
-  const finalTotal = cartTotal + shippingFee;
+  const shippingFee = selectedCartItems.length > 0 ? 120 : 0;
+  const finalTotal = selectedCartTotal + shippingFee;
+  const allItemsSelected = cart.length > 0 && selectedCartItemIds.length === cart.length;
 
   if (isCartLoading) {
     return <div className="px-4 py-12 text-center text-sm font-bold text-[#35322E]">Loading your cart...</div>;
@@ -69,11 +74,23 @@ export const CartView: React.FC = () => {
 
   return (
     <div className="space-y-4 px-4 pt-3 pb-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-black text-[#35322E]">Shopping Cart</h1>
-        <span className="text-xs font-bold text-[#35322E]/60">
-          {cart.reduce((s, i) => s + i.quantity, 0)} item(s)
-        </span>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-black text-[#35322E]">Shopping Cart</h1>
+          <span className="text-xs font-bold text-[#35322E]/60">
+            {cart.reduce((s, i) => s + i.quantity, 0)} item(s)
+          </span>
+        </div>
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-[#35322E]">
+          <input
+            type="checkbox"
+            checked={allItemsSelected}
+            onChange={(event) => selectAllCartItems(event.target.checked)}
+            className="h-4 w-4 accent-[#E23B2E]"
+            aria-label="Select all cart products"
+          />
+          Select all
+        </label>
       </div>
 
       {/* 📦 Cart Items List */}
@@ -83,6 +100,13 @@ export const CartView: React.FC = () => {
             key={item.id}
             className="bg-[#FAF5EB] rounded-2xl p-3.5 border border-[#35322E]/10 shadow-xs flex gap-3 items-center"
           >
+            <input
+              type="checkbox"
+              checked={selectedCartItemIds.includes(item.id)}
+              onChange={() => toggleCartItemSelection(item.id)}
+              className="h-4 w-4 shrink-0 accent-[#E23B2E]"
+              aria-label={`Select ${item.name} for checkout`}
+            />
             <div
               onClick={() => navigateTo('product-detail', { productId: item.productId })}
               className="w-18 h-18 rounded-xl bg-[#F3E4C8] overflow-hidden shrink-0 cursor-pointer"
@@ -153,7 +177,7 @@ export const CartView: React.FC = () => {
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span className="font-bold text-[#35322E]">
-              ₱{cartTotal.toLocaleString('en-PH')}
+              ₱{selectedCartTotal.toLocaleString('en-PH')}
             </span>
           </div>
 
@@ -175,9 +199,10 @@ export const CartView: React.FC = () => {
         <button
           type="button"
           onClick={() => navigateTo('checkout')}
+          disabled={selectedCartItems.length === 0}
           className="w-full py-3.5 rounded-full bg-[#E23B2E] hover:bg-[#B82A20] text-white font-extrabold text-xs transition active:scale-95 shadow-md flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Proceed to Checkout</span>
+          <span>{selectedCartItems.length > 0 ? `Checkout Selected (${selectedCartItems.length})` : 'Select products to checkout'}</span>
           <ArrowRight size={15} />
         </button>
 

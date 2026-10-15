@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, LifeBuoy, LoaderCircle, MessageSquareText, RotateCcw, Send } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { supabase } from '../../lib/supabase/client';
 import {
   type SupportCategory,
   type SupportTicket,
@@ -47,13 +48,19 @@ export const SupportView: React.FC = () => {
   const [replyError, setReplyError] = useState('');
   const [isSendingReply, setIsSendingReply] = useState(false);
   const ticketRequestId = useRef(0);
+  const ticketsRef = useRef(tickets);
+
+  useEffect(() => {
+    ticketsRef.current = tickets;
+  }, [tickets]);
 
   useEffect(() => {
     setName(currentUser?.full_name || '');
     setEmail(currentUser?.email || '');
   }, [currentUser?.id, currentUser?.full_name, currentUser?.email]);
 
-  const refreshTickets = useCallback(async () => {
+  const refreshTickets = useCallback(async (options?: {silent?: boolean}) => {
+    const silent = options?.silent === true;
     const requestId = ++ticketRequestId.current;
     const userId = currentUser?.id;
     if (!userId) {
@@ -63,7 +70,7 @@ export const SupportView: React.FC = () => {
       return;
     }
 
-    setIsLoadingTickets(true);
+    if (!silent) setIsLoadingTickets(true);
     setTicketLoadError('');
     try {
       const loadedTickets = await fetchUserSupportTickets(userId);
@@ -78,7 +85,7 @@ export const SupportView: React.FC = () => {
       if (requestId !== ticketRequestId.current) return;
       setTicketLoadError(error instanceof Error ? error.message : 'Unable to load your support tickets.');
     } finally {
-      if (requestId === ticketRequestId.current) setIsLoadingTickets(false);
+      if (requestId === ticketRequestId.current && !silent) setIsLoadingTickets(false);
     }
   }, [currentUser?.id]);
 
@@ -90,6 +97,44 @@ export const SupportView: React.FC = () => {
       ticketRequestId.current += 1;
     };
   }, [refreshTickets]);
+
+  useEffect(() => {
+    const userId = currentUser?.id;
+    if (!userId || mode !== 'track') return;
+
+    const channel = supabase
+      .channel(`support-ticket-replies:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'support_ticket_messages',
+        },
+        (payload) => {
+          const ticketId = (payload.new as {ticket_id?: unknown}).ticket_id;
+          if (
+            typeof ticketId === 'string'
+            && ticketsRef.current.some((ticket) => ticket.id === ticketId)
+          ) {
+            void refreshTickets({silent: true});
+          }
+        },
+      )
+      .subscribe();
+
+    const pollForReplies = () => {
+      if (document.visibilityState === 'visible') void refreshTickets({silent: true});
+    };
+    const pollTimer = window.setInterval(pollForReplies, 10000);
+    document.addEventListener('visibilitychange', pollForReplies);
+
+    return () => {
+      window.clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', pollForReplies);
+      void supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, mode, refreshTickets]);
 
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || null;
 
