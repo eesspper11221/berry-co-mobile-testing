@@ -32,7 +32,7 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="sticky bottom-0 z-40 bg-[#FAF5EB]/95 backdrop-blur-md border-t border-[#35322E]/10 px-2 py-1.5 pb-3">
+    <nav className="sticky bottom-0 z-40 h-[76px] shrink-0 bg-[#FAF5EB]/95 backdrop-blur-md border-t border-[#35322E]/10 px-2 py-1.5 pb-3">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {customerTabs.map((tab) => {
           const isActive =

@@ -18,7 +18,6 @@ import { BerryCoLogo } from '../common/BerryCoLogo';
 export const ProfileView: React.FC = () => {
   const {
     currentUser,
-    orders,
     wishlist,
     navigateTo,
     logout,
@@ -82,26 +81,6 @@ export const ProfileView: React.FC = () => {
             <p className="text-xs font-semibold text-[#35322E]/60 truncate">
               {currentUser.email}
             </p>
-          </div>
-        </div>
-
-        {/* Collector Badges / Points Strip */}
-        <div className="bg-[#F3E4C8] rounded-2xl p-3 flex items-center justify-around text-center text-xs">
-          <div>
-            <span className="block font-black text-[#35322E] text-sm">{orders.length}</span>
-            <span className="text-[10px] font-bold text-[#35322E]/60 uppercase">Orders</span>
-          </div>
-          <div className="w-px h-6 bg-[#35322E]/15" />
-          <div>
-            <span className="block font-black text-[#35322E] text-sm">{wishlist.length}</span>
-            <span className="text-[10px] font-bold text-[#35322E]/60 uppercase">Saved</span>
-          </div>
-          <div className="w-px h-6 bg-[#35322E]/15" />
-          <div>
-            <span className="block font-black text-[#E23B2E] text-sm">
-              {currentUser.reward_points || 480} pts
-            </span>
-            <span className="text-[10px] font-bold text-[#35322E]/60 uppercase">Berry Club</span>
           </div>
         </div>
 

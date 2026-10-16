@@ -50,28 +50,16 @@ export const MobileFrame: React.FC<{ children: React.ReactNode }> = ({ children 
 
       {/* Main Container: Either Phone Chassis or Fluid Mobile Container */}
       <div
-        className={`w-full transition-all duration-300 ${
+        style={{
+          '--bottom-nav-height': '76px',
+          '--home-indicator-height': isNativeApp ? '0px' : '12px',
+        } as React.CSSProperties}
+        className={`w-full transform-gpu transition-all duration-300 ${
           isPhoneFrame
             ? 'max-w-[420px] h-[100dvh] sm:h-[844px] sm:rounded-[3rem] sm:border-[8px] sm:border-stone-800 sm:shadow-2xl overflow-hidden relative flex flex-col bg-[#EAD0AA]'
             : 'max-w-md min-h-[100dvh] flex flex-col bg-[#EAD0AA] shadow-xl'
         }`}
       >
-        {!isNativeApp && (
-          <div className="bg-[#FAF5EB] text-[#35322E] px-6 pt-3 pb-1 flex items-center justify-between text-xs font-black select-none shrink-0 border-b border-[#35322E]/5">
-            <span>9:41</span>
-            <div className="w-20 h-4 bg-stone-900 rounded-full flex items-center justify-center">
-              <span className="w-2 h-2 rounded-full bg-stone-800 ml-6" />
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <span>5G</span>
-              <span className="text-[10px]">100%</span>
-              <div className="w-5 h-2.5 border border-[#35322E] rounded-xs p-0.5 flex items-center">
-                <div className="h-full w-full bg-[#35322E] rounded-2xs" />
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Scrollable Viewport Container */}
         <div
           id="mobile-scroll-container"
