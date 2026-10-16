@@ -4,6 +4,7 @@ import express from 'express';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createClient} from '@supabase/supabase-js';
+import {createPaymentReturnUrls} from './lib/paymentReturnUrls.js';
 
 const rootDirectory = path.dirname(fileURLToPath(import.meta.url));
 const distDirectory = path.join(rootDirectory, 'dist');
@@ -218,8 +219,12 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
       throw new Error('The order total does not match its items. Refresh your cart and try again.');
     }
 
-    const siteUrl = (process.env.BERRYCO_SITE_URL || '').replace(/\/+$/, '');
-    if (!siteUrl) throw new Error('Set BERRYCO_SITE_URL to the storefront URL for payment redirects.');
+    const siteUrl = process.env.BERRYCO_SITE_URL || '';
+    const returnUrls = createPaymentReturnUrls(
+      order.id,
+      request.get('origin') === 'capacitor://localhost',
+      siteUrl,
+    );
 
     const responseFromPayMongo = await fetch(`${payMongoApiUrl}/checkout_sessions`, {
       method: 'POST',
@@ -236,8 +241,8 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
             description: `Berry Co. order ${order.order_number}`,
             reference_number: order.order_number,
             metadata: {order_id: order.id},
-            success_url: `${siteUrl}/payment-return?payment=success&order=${encodeURIComponent(order.id)}`,
-            cancel_url: `${siteUrl}/payment-return?payment=cancelled&order=${encodeURIComponent(order.id)}`,
+            success_url: returnUrls.successUrl,
+            cancel_url: returnUrls.cancelUrl,
           },
         },
       }),

@@ -37,6 +37,7 @@ export const CheckoutView: React.FC = () => {
 
   const redirectToPayment = async (order: Order) => {
     setIsRedirectingToPayment(true);
+    setOrderConfirmed(order);
     setSubmitError('');
     try {
       const session = await createPayMongoCheckoutSession(order.id, paymentMethod as 'gcash' | 'card');

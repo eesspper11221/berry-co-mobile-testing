@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
+import { InAppBrowser } from '@capgo/capacitor-inappbrowser';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { MobileFrame } from './components/common/MobileFrame';
 import { Header } from './components/common/Header';
@@ -14,6 +15,7 @@ import { CatalogView } from './components/views/CatalogView';
 import { ProductDetailView } from './components/views/ProductDetailView';
 import { CartView } from './components/views/CartView';
 import { CheckoutView } from './components/views/CheckoutView';
+import { OrderSuccessView } from './components/views/OrderSuccessView';
 import { OrdersView } from './components/views/OrdersView';
 import { OrderDetailView } from './components/views/OrderDetailView';
 import { WishlistView } from './components/views/WishlistView';
@@ -24,7 +26,11 @@ import { AuthView } from './components/views/AuthView';
 const isPaymentReturnUrl = (value: string): boolean => {
   try {
     const url = new URL(value);
-    return url.hostname === 'berry-co-mobile-testing-production.up.railway.app'
+    if (url.protocol === 'berryco:') {
+      return url.hostname === 'payment-return' && url.pathname === '';
+    }
+    return !Capacitor.isNativePlatform()
+      && url.origin === window.location.origin
       && url.pathname === '/payment-return';
   } catch {
     return false;
@@ -32,7 +38,7 @@ const isPaymentReturnUrl = (value: string): boolean => {
 };
 
 const NativeAppLifecycle: React.FC = () => {
-  const { currentUser, goBack, navigateToPaymentOrder, refreshOrders, showToast } = useStore();
+  const { currentUser, goBack, navigateTo, navigateToPaymentOrder, refreshOrders, showToast } = useStore();
   const [pendingPaymentUrl, setPendingPaymentUrl] = useState<string | null>(null);
   const isHandlingReturn = useRef(false);
   const actions = useRef({ goBack });
@@ -42,7 +48,10 @@ const NativeAppLifecycle: React.FC = () => {
     const capturePaymentReturn = (url: string) => {
       if (!isPaymentReturnUrl(url)) return;
       setPendingPaymentUrl(url);
-      if (Capacitor.isNativePlatform()) void Browser.close().catch(() => {});
+      if (Capacitor.isNativePlatform()) {
+        void Browser.close().catch(() => {});
+        void InAppBrowser.close().catch(() => {});
+      }
     };
 
     if (Capacitor.isNativePlatform()) {
@@ -50,11 +59,23 @@ const NativeAppLifecycle: React.FC = () => {
       const backListener = CapacitorApp.addListener('backButton', () => {
         if (!actions.current.goBack()) void CapacitorApp.exitApp();
       });
+      const webViewUrlListener = Capacitor.getPlatform() === 'android'
+        ? InAppBrowser.addListener('urlChangeEvent', ({url}) => capturePaymentReturn(url))
+        : undefined;
+      const webViewSchemeListener = Capacitor.getPlatform() === 'android'
+        ? InAppBrowser.addListener('customSchemeIntercepted', ({url}) => capturePaymentReturn(url))
+        : undefined;
       void appUrlListener.then((listener) => {
         if (!Capacitor.isNativePlatform()) void listener.remove();
       });
       void backListener.then((listener) => {
         if (!Capacitor.isNativePlatform()) void listener.remove();
+      });
+      void webViewUrlListener?.then((listener) => {
+        if (Capacitor.getPlatform() !== 'android') void listener.remove();
+      });
+      void webViewSchemeListener?.then((listener) => {
+        if (Capacitor.getPlatform() !== 'android') void listener.remove();
       });
       void CapacitorApp.getLaunchUrl().then((launch) => {
         if (launch?.url) capturePaymentReturn(launch.url);
@@ -62,6 +83,8 @@ const NativeAppLifecycle: React.FC = () => {
       return () => {
         void appUrlListener.then((listener) => listener.remove());
         void backListener.then((listener) => listener.remove());
+        void webViewUrlListener?.then((listener) => listener.remove());
+        void webViewSchemeListener?.then((listener) => listener.remove());
       };
     }
 
@@ -98,13 +121,16 @@ const NativeAppLifecycle: React.FC = () => {
         }
       }
 
-      navigateToPaymentOrder(orderId);
       if (paymentResult === 'cancelled') {
+        navigateTo('order-detail', {orderId}, 'root');
         showToast('Payment was not completed. The order is still pending.', 'info');
-      } else if (returnedOrder?.payment_status === 'paid') {
-        showToast('Payment confirmed.', 'success');
       } else {
-        showToast('Payment received. Confirmation is still processing.', 'info');
+        navigateToPaymentOrder(orderId);
+        if (returnedOrder.payment_status === 'paid') {
+          showToast('Payment confirmed.', 'success');
+        } else {
+          showToast('Payment received. Confirmation is still processing.', 'info');
+        }
       }
     };
 
@@ -135,6 +161,8 @@ const MainScreenRouter: React.FC = () => {
         return <CartView />;
       case 'checkout':
         return <CheckoutView />;
+      case 'order-success':
+        return <OrderSuccessView />;
       case 'orders':
         return <OrdersView />;
       case 'order-detail':

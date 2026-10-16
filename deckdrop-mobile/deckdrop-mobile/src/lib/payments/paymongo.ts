@@ -1,5 +1,6 @@
 import {Capacitor} from '@capacitor/core';
 import {Browser} from '@capacitor/browser';
+import {InAppBrowser, ToolBarType} from '@capgo/capacitor-inappbrowser';
 import {supabase} from '../supabase/client';
 
 interface PayMongoCheckoutSession {
@@ -39,6 +40,22 @@ export const createPayMongoCheckoutSession = async (
 };
 
 export const openPayMongoCheckout = async (checkoutUrl: string): Promise<void> => {
+  if (Capacitor.getPlatform() === 'android') {
+    await InAppBrowser.openWebView({
+      url: checkoutUrl,
+      title: 'Berry Co. Secure Checkout',
+      toolbarType: ToolBarType.NAVIGATION,
+      toolbarColor: '#FAF5EB',
+      toolbarTextColor: '#35322E',
+      showArrow: true,
+      closeModal: true,
+      closeModalTitle: 'Leave checkout?',
+      closeModalDescription: 'Your order will remain pending if you leave before completing payment.',
+      closeModalOk: 'Leave checkout',
+      closeModalCancel: 'Continue payment',
+    });
+    return;
+  }
   if (Capacitor.isNativePlatform()) {
     await Browser.open({url: checkoutUrl});
     return;

@@ -279,7 +279,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         'order-detail': 'orders',
         support: 'profile',
       };
-      const fallbackScreen = fallbackScreens[currentScreen];
+      const fallbackScreen = fallbackScreens[currentScreen]
+        || (currentScreen === 'home' ? undefined : 'home');
       if (!fallbackScreen) return false;
       previous = {screen: fallbackScreen, productId: null, orderId: null};
     }
@@ -292,7 +293,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const navigateToPaymentOrder = (orderId: string) => {
     navigationHistory.current = [{screen: 'orders', productId: null, orderId: null}];
-    setCurrentScreen('order-detail');
+    setCurrentScreen('order-success');
     setSelectedProductId(null);
     setSelectedOrderId(orderId);
     document.getElementById('mobile-scroll-container')?.scrollTo({top: 0, behavior: 'smooth'});

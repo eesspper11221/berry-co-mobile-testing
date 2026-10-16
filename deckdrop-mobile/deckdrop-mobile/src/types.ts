@@ -79,6 +79,7 @@ export type ScreenType =
   | 'product-detail'
   | 'cart'
   | 'checkout'
+  | 'order-success'
   | 'orders'
   | 'order-detail'
   | 'wishlist'
