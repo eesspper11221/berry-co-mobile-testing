@@ -2,5 +2,8 @@
 	"private": true,
 	"scripts": {
 		"dev": "npm --prefix deckdrop-mobile/deckdrop-mobile run dev"
+	},
+	"devDependencies": {
+		"@capacitor/assets": "^3.0.5"
 	}
 }
