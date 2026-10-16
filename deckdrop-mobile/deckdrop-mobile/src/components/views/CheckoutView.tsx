@@ -10,7 +10,7 @@ import {
   Package,
 } from 'lucide-react';
 import { Order } from '../../types';
-import { createPayMongoCheckoutSession } from '../../lib/payments/paymongo';
+import { createPayMongoCheckoutSession, openPayMongoCheckout } from '../../lib/payments/paymongo';
 
 export const CheckoutView: React.FC = () => {
   const {
@@ -40,7 +40,7 @@ export const CheckoutView: React.FC = () => {
     setSubmitError('');
     try {
       const session = await createPayMongoCheckoutSession(order.id, paymentMethod as 'gcash' | 'card');
-      window.location.assign(session.checkoutUrl);
+      await openPayMongoCheckout(session.checkoutUrl);
     } catch (error) {
       setOrderConfirmed(order);
       setSubmitError(error instanceof Error ? error.message : 'Unable to start payment.');
@@ -144,7 +144,7 @@ export const CheckoutView: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigateTo('home')}
+              onClick={() => navigateTo('home', undefined, 'root')}
               className="w-full py-3 rounded-full bg-[#F3E4C8] text-[#35322E] font-bold text-xs hover:bg-[#EAD0AA] transition cursor-pointer"
             >
               Continue Shopping

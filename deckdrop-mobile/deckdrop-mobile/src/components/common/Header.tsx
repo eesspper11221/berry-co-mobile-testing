@@ -7,6 +7,7 @@ export const Header: React.FC = () => {
   const {
     currentScreen,
     navigateTo,
+    goBack,
     cartCount,
     wishlist,
     currentUser,
@@ -19,12 +20,7 @@ export const Header: React.FC = () => {
   ].includes(currentScreen);
 
   const handleBack = () => {
-    if (currentScreen === 'product-detail') navigateTo('catalog');
-    else if (currentScreen === 'checkout') navigateTo('cart');
-    else if (currentScreen === 'order-detail') navigateTo('orders');
-    else {
-      navigateTo('home');
-    }
+    if (!goBack()) navigateTo('home', undefined, 'root');
   };
 
   return (
@@ -47,7 +43,7 @@ export const Header: React.FC = () => {
           <button
             id="brand-logo-button"
             type="button"
-            onClick={() => navigateTo('home')}
+            onClick={() => navigateTo('home', undefined, 'root')}
             className="flex items-center gap-2 group cursor-pointer transition active:scale-95 text-left"
             aria-label="Berry Co. Home"
           >

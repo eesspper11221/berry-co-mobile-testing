@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.berryco.store",
+      "sha256_cert_fingerprints": [
+        "80:6D:EE:77:03:20:C3:67:A8:05:92:85:75:DA:AD:F1:12:40:A3:8F:7A:6B:BD:3C:0A:EC:C0:AB:17:4B:8B:BB"
+      ]
+    }
+  }
+]

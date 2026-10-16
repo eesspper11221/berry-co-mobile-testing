@@ -46,7 +46,7 @@ export const BottomNav: React.FC = () => {
               key={tab.id}
               id={`nav-tab-${tab.id}`}
               type="button"
-              onClick={() => navigateTo(tab.id)}
+              onClick={() => navigateTo(tab.id, undefined, 'root')}
               className={`relative flex flex-col items-center justify-center flex-1 py-1.5 px-1 rounded-2xl transition-all duration-150 active:scale-90 cursor-pointer ${
                 isActive ? 'text-[#E23B2E] font-extrabold' : 'text-[#35322E]/60 font-semibold hover:text-[#35322E]'
               }`}

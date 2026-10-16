@@ -12,6 +12,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
+import { createPayMongoCheckoutSession, openPayMongoCheckout } from '../../lib/payments/paymongo';
 
 const formatShippingAddress = (value: string) => {
   try {
@@ -25,15 +26,20 @@ const formatShippingAddress = (value: string) => {
 };
 
 export const OrderDetailView: React.FC = () => {
-  const { selectedOrder, navigateTo, showToast, cancelOrder } = useStore();
+  const { selectedOrder, navigateTo, goBack, showToast, cancelOrder } = useStore();
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+
+  const handleBackToOrders = () => {
+    if (!goBack()) navigateTo('orders', undefined, 'root');
+  };
 
   if (!selectedOrder) {
     return (
       <div className="p-8 text-center space-y-4">
         <p className="text-sm font-bold text-[#35322E]">Order not found</p>
         <button
-          onClick={() => navigateTo('orders')}
+          onClick={handleBackToOrders}
           className="px-5 py-2.5 rounded-full bg-[#E23B2E] text-white text-xs font-black"
         >
           Back to Orders
@@ -76,13 +82,29 @@ export const OrderDetailView: React.FC = () => {
     }
   };
 
+  const handleRetryPayment = async () => {
+    setIsRetryingPayment(true);
+    try {
+      const paymentMethod = selectedOrder.payment_method.toLowerCase();
+      if (paymentMethod !== 'gcash' && paymentMethod !== 'card') {
+        throw new Error('Retry is only available for online payments.');
+      }
+      const session = await createPayMongoCheckoutSession(selectedOrder.id, paymentMethod);
+      await openPayMongoCheckout(session.checkoutUrl);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to retry payment.', 'error');
+    } finally {
+      setIsRetryingPayment(false);
+    }
+  };
+
   return (
     <div className="space-y-4 px-4 pt-3 pb-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <button
-            onClick={() => navigateTo('orders')}
+            onClick={handleBackToOrders}
             className="flex items-center gap-1 text-[11px] font-bold text-[#E23B2E] hover:underline mb-1 cursor-pointer"
           >
             <ChevronLeft size={13} />
@@ -246,6 +268,19 @@ export const OrderDetailView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedOrder.status === 'pending'
+        && selectedOrder.payment_status === 'pending'
+        && ['gcash', 'card'].includes(selectedOrder.payment_method.toLowerCase()) && (
+          <button
+            type="button"
+            onClick={() => void handleRetryPayment()}
+            disabled={isRetryingPayment}
+            className="w-full rounded-full bg-[#E23B2E] px-4 py-3 text-xs font-black text-white transition hover:bg-[#B82A20] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isRetryingPayment ? 'Opening payment...' : 'Retry Payment'}
+          </button>
+        )}
 
       {selectedOrder.status === 'pending' ? (
         <button

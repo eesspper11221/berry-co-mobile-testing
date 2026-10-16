@@ -1,3 +1,5 @@
+import {Capacitor} from '@capacitor/core';
+import {Browser} from '@capacitor/browser';
 import {supabase} from '../supabase/client';
 
 interface PayMongoCheckoutSession {
@@ -34,4 +36,12 @@ export const createPayMongoCheckoutSession = async (
     throw new Error('The payment service returned an invalid checkout session.');
   }
   return {checkoutUrl: result.checkoutUrl, checkoutSessionId: result.checkoutSessionId};
+};
+
+export const openPayMongoCheckout = async (checkoutUrl: string): Promise<void> => {
+  if (Capacitor.isNativePlatform()) {
+    await Browser.open({url: checkoutUrl});
+    return;
+  }
+  window.location.assign(checkoutUrl);
 };

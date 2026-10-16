@@ -53,7 +53,7 @@ export const AuthView: React.FC = () => {
     const user = toUserProfile(data.user);
     setCurrentUser(user);
     showToast(`Signed in as ${user.full_name}.`, 'success');
-    navigateTo('home');
+    navigateTo('home', undefined, 'root');
   };
 
   const handleRegister = async (event: React.FormEvent) => {
@@ -94,7 +94,7 @@ export const AuthView: React.FC = () => {
     const user = toUserProfile(data.user);
     setCurrentUser(user);
     showToast(`Welcome to Berry Co., ${user.full_name}.`, 'success');
-    navigateTo('home');
+    navigateTo('home', undefined, 'root');
   };
 
   const inputClass = 'w-full rounded-xl border border-[#35322E]/20 bg-[#F3E4C8]/75 px-3.5 py-3 text-sm font-semibold text-[#35322E] placeholder-[#35322E]/45 outline-none transition focus:border-[#E23B2E] focus:ring-2 focus:ring-[#E23B2E]/10';

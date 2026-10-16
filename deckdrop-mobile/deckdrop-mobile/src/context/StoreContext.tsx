@@ -14,10 +14,20 @@ interface ToastMessage {
   type?: 'success' | 'info' | 'error';
 }
 
+type NavigationEntry = {
+  screen: ScreenType;
+  productId: string | null;
+  orderId: string | null;
+};
+
+type NavigationMode = 'push' | 'root' | 'replace';
+
 interface StoreContextType {
   // Navigation & View
   currentScreen: ScreenType;
-  navigateTo: (screen: ScreenType, params?: { productId?: string; orderId?: string; query?: string }) => void;
+  navigateTo: (screen: ScreenType, params?: { productId?: string; orderId?: string; query?: string }, mode?: NavigationMode) => void;
+  goBack: () => boolean;
+  navigateToPaymentOrder: (orderId: string) => void;
   selectedProductId: string | null;
   selectedOrderId: string | null;
   
@@ -62,7 +72,7 @@ interface StoreContextType {
   orders: Order[];
   isOrdersLoading: boolean;
   ordersError: string | null;
-  refreshOrders: () => Promise<void>;
+  refreshOrders: () => Promise<Order[]>;
   cancelOrder: (orderId: string) => Promise<void>;
   selectedOrder: Order | null;
   placeOrder: (details: {
@@ -195,6 +205,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const navigationHistory = useRef<NavigationEntry[]>([]);
 
   // Filters & Search
   const [filters, setFilters] = useState<FilterOptions>(DEFAULT_FILTERS);
@@ -228,14 +239,26 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const navigateTo = (
     screen: ScreenType,
-    params?: { productId?: string; orderId?: string; query?: string }
+    params?: { productId?: string; orderId?: string; query?: string },
+    mode: NavigationMode = 'push'
   ) => {
-    if (params?.productId) {
-      setSelectedProductId(params.productId);
+    const nextProductId = params?.productId || null;
+    const nextOrderId = params?.orderId || null;
+    if (mode === 'root') {
+      navigationHistory.current = [];
+    } else if (mode === 'push' && (
+      screen !== currentScreen
+      || nextProductId !== selectedProductId
+      || nextOrderId !== selectedOrderId
+    )) {
+      navigationHistory.current.push({
+        screen: currentScreen,
+        productId: selectedProductId,
+        orderId: selectedOrderId,
+      });
     }
-    if (params?.orderId) {
-      setSelectedOrderId(params.orderId);
-    }
+    setSelectedProductId(nextProductId);
+    setSelectedOrderId(nextOrderId);
     if (params?.query !== undefined) {
       setFilters((prev) => ({ ...prev, query: params.query || '' }));
     }
@@ -245,6 +268,34 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (container) {
       container.scrollTo({ top: 0, behavior: 'smooth' });
     }
+  };
+
+  const goBack = () => {
+    let previous = navigationHistory.current.pop();
+    if (!previous) {
+      const fallbackScreens: Partial<Record<ScreenType, ScreenType>> = {
+        'product-detail': 'catalog',
+        checkout: 'cart',
+        'order-detail': 'orders',
+        support: 'profile',
+      };
+      const fallbackScreen = fallbackScreens[currentScreen];
+      if (!fallbackScreen) return false;
+      previous = {screen: fallbackScreen, productId: null, orderId: null};
+    }
+    setCurrentScreen(previous.screen);
+    setSelectedProductId(previous.productId);
+    setSelectedOrderId(previous.orderId);
+    document.getElementById('mobile-scroll-container')?.scrollTo({top: 0, behavior: 'smooth'});
+    return true;
+  };
+
+  const navigateToPaymentOrder = (orderId: string) => {
+    navigationHistory.current = [{screen: 'orders', productId: null, orderId: null}];
+    setCurrentScreen('order-detail');
+    setSelectedProductId(null);
+    setSelectedOrderId(orderId);
+    document.getElementById('mobile-scroll-container')?.scrollTo({top: 0, behavior: 'smooth'});
   };
 
   const selectedProduct = useMemo(
@@ -319,14 +370,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setOrders([]);
       setOrdersError(null);
       setIsOrdersLoading(false);
-      return;
+      return [];
     }
     setIsOrdersLoading(true);
     setOrdersError(null);
     try {
-      setOrders(await fetchUserOrders(currentUser.id));
+      const loadedOrders = await fetchUserOrders(currentUser.id);
+      setOrders(loadedOrders);
+      return loadedOrders;
     } catch (error) {
       setOrdersError(error instanceof Error ? error.message : 'Unable to load your orders.');
+      return [];
     } finally {
       setIsOrdersLoading(false);
     }
@@ -609,7 +663,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const target = account === 'juan' ? DEMO_USERS[0] : (DEMO_USERS[1] || DEMO_USERS[0]);
     setCurrentUser(target);
     showToast(`Logged in as ${target.full_name}`, 'success');
-    navigateTo('home');
+    navigateTo('home', undefined, 'root');
   };
 
   const logout = async () => {
@@ -620,7 +674,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
     setCurrentUser(null);
     showToast('Signed out of Berry Co.', 'info');
-    navigateTo('home');
+    navigateTo('home', undefined, 'root');
   };
 
   const resetFilters = () => {
@@ -632,6 +686,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         currentScreen,
         navigateTo,
+        goBack,
+        navigateToPaymentOrder,
         selectedProductId,
         selectedOrderId,
         products,

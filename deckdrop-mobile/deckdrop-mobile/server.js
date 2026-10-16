@@ -236,8 +236,8 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
             description: `Berry Co. order ${order.order_number}`,
             reference_number: order.order_number,
             metadata: {order_id: order.id},
-            success_url: `${siteUrl}/?payment=success&order=${encodeURIComponent(order.id)}`,
-            cancel_url: `${siteUrl}/?payment=cancelled&order=${encodeURIComponent(order.id)}`,
+            success_url: `${siteUrl}/payment-return?payment=success&order=${encodeURIComponent(order.id)}`,
+            cancel_url: `${siteUrl}/payment-return?payment=cancelled&order=${encodeURIComponent(order.id)}`,
           },
         },
       }),
@@ -264,6 +264,10 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
 });
 
 app.use(express.static(distDirectory));
+app.get('/.well-known/assetlinks.json', (_request, response) => {
+  response.type('application/json');
+  response.sendFile(path.join(rootDirectory, 'public', '.well-known', 'assetlinks.json'));
+});
 app.get('*', (_request, response) => {
   response.sendFile(path.join(distDirectory, 'index.html'));
 });
