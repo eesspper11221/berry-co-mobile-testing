@@ -87,7 +87,6 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
     .from('orders')
     .select('*')
     .eq('customer_id', userId)
-    .neq('status', 'cancelled')
     .order('created_at', {ascending: false});
   if (error) throw new Error(error.message);
 
@@ -110,4 +109,10 @@ export const fetchUserOrders = async (userId: string): Promise<Order[]> => {
   }
 
   return rows.map((order) => mapOrder(order, mapOrderItems(itemsByOrder.get(order.id) || [], images)));
+};
+
+export const cancelUserOrder = async (orderId: string): Promise<void> => {
+  const {data, error} = await supabase.rpc('cancel_customer_order', {p_order_id: orderId});
+  if (error) throw new Error(error.message);
+  if (data !== true) throw new Error('This order is no longer pending or cannot be cancelled.');
 };

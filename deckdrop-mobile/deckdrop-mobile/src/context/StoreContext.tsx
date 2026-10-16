@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useRef 
 import { supabase } from '../lib/supabase/client';
 import { toUserProfile } from '../lib/auth/profile';
 import { addUserCartItem, fetchUserCart, removeUserCartItem, updateUserCartItem } from '../lib/repositories/cart';
-import { fetchUserOrders } from '../lib/repositories/orders';
+import { cancelUserOrder, fetchUserOrders } from '../lib/repositories/orders';
 import { fetchProducts } from '../lib/repositories/products';
 import { addUserWishlistItem, clearUserWishlist, fetchUserWishlist, removeUserWishlistItem } from '../lib/repositories/wishlist';
 import { Product, CartItem, Order, OrderItem, UserProfile, ScreenType, FilterOptions } from '../types';
@@ -63,6 +63,7 @@ interface StoreContextType {
   isOrdersLoading: boolean;
   ordersError: string | null;
   refreshOrders: () => Promise<void>;
+  cancelOrder: (orderId: string) => Promise<void>;
   selectedOrder: Order | null;
   placeOrder: (details: {
     customer_name: string;
@@ -329,6 +330,16 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     } finally {
       setIsOrdersLoading(false);
     }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    if (!currentUser) throw new Error('Sign in to cancel this order.');
+    await cancelUserOrder(orderId);
+    setOrders((previous) => previous.map((order) =>
+      order.id === orderId ? {...order, status: 'cancelled'} : order
+    ));
+    await refreshOrders();
+    showToast('Order cancelled.', 'success');
   };
 
   useEffect(() => {
@@ -658,6 +669,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isOrdersLoading,
         ordersError,
         refreshOrders,
+        cancelOrder,
         selectedOrder,
         placeOrder,
         currentUser,

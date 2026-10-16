@@ -27,6 +27,14 @@ Customers can select individual cart products or select all before checkout. The
 
 `npm run dev` builds the browser bundle with `scripts/build.mjs` and serves the generated `dist` directory at http://localhost:3000.
 
+## Deploy the API for Android Payments
+
+The Android app sends online-payment requests to `BERRYCO_API_BASE_URL`. That URL must serve this project's Express `server.js`, including `/api/payments/paymongo/checkout-session`; a static storefront host is not sufficient. For Railway, set the service root directory to `deckdrop-mobile/deckdrop-mobile`. `railway.json` builds the app and starts the Express server.
+
+Configure `BERRYCO_SUPABASE_URL`, `BERRYCO_SUPABASE_PUBLISHABLE_KEY`, `BERRYCO_PAYMONGO_SECRET_KEY`, and `BERRYCO_SITE_URL` in the Railway service. `BERRYCO_SITE_URL` must be the public storefront URL used for PayMongo return redirects. In the local `.env.local`, set `BERRYCO_API_BASE_URL` to the Railway service's public origin, without an `/api` suffix, before building the APK. Do not use `localhost` for a physical Android device.
+
+After deployment, the checkout endpoint should answer an unauthenticated POST with HTTP 401 and a `capacitor://localhost` OPTIONS preflight with HTTP 204. Then rebuild and install the APK with `npm run android:build`.
+
 For a typecheck without starting the server:
 
 `npm run lint`

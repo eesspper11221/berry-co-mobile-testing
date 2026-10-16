@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../../context/StoreContext';
 import {
   Package,
@@ -9,6 +9,7 @@ import {
   CreditCard,
   Printer,
   ChevronLeft,
+  XCircle,
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
 
@@ -24,7 +25,8 @@ const formatShippingAddress = (value: string) => {
 };
 
 export const OrderDetailView: React.FC = () => {
-  const { selectedOrder, navigateTo, showToast } = useStore();
+  const { selectedOrder, navigateTo, showToast, cancelOrder } = useStore();
+  const [isCancelling, setIsCancelling] = useState(false);
 
   if (!selectedOrder) {
     return (
@@ -58,6 +60,21 @@ export const OrderDetailView: React.FC = () => {
   };
 
   const currentStepIdx = getStepIndex(selectedOrder.status);
+
+  const handleCancelOrder = async () => {
+    const confirmationMessage = selectedOrder.payment_status === 'paid'
+      ? `Order #${selectedOrder.order_number} is already paid. Cancelling it will not automatically issue a refund. Continue?`
+      : `Are you sure you want to cancel order #${selectedOrder.order_number}?`;
+    if (!window.confirm(confirmationMessage)) return;
+    setIsCancelling(true);
+    try {
+      await cancelOrder(selectedOrder.id);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Unable to cancel this order.', 'error');
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   return (
     <div className="space-y-4 px-4 pt-3 pb-8">
@@ -229,6 +246,22 @@ export const OrderDetailView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedOrder.status === 'pending' ? (
+        <button
+          type="button"
+          onClick={() => void handleCancelOrder()}
+          disabled={isCancelling}
+          className="w-full flex items-center justify-center gap-2 rounded-full border border-[#B82A20]/30 bg-white px-4 py-3 text-xs font-black text-[#B82A20] transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <XCircle size={15} />
+          <span>{isCancelling ? 'Cancelling order...' : 'Cancel Order'}</span>
+        </button>
+      ) : selectedOrder.status === 'cancelled' ? (
+        <div role="status" className="rounded-2xl border border-[#35322E]/10 bg-[#FAF5EB] px-4 py-3 text-center text-xs font-bold text-[#35322E]/70">
+          This order has been cancelled.
+        </div>
+      ) : null}
     </div>
   );
 };
