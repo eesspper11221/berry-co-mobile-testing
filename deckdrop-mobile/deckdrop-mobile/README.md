@@ -58,3 +58,32 @@ The debug APK is created at `android/app/build/outputs/apk/debug/app-debug.apk`.
 For a command-line debug APK, run:
 
 `npm run android:build`
+
+## Beta Testing Instructions
+
+Please test both the Android APK and the mobile website on an Android phone. Use a test account provided by the Berry Co. team; do not share account passwords, verification codes, or payment details in feedback.
+
+### Test on Android
+
+1. Install the latest debug APK shared by the Berry Co. team. If Android asks for permission to install an unknown app, only allow it if you trust the person who provided the APK.
+2. Connect to the internet, open Berry Co., and sign in with the provided test account.
+3. Browse products, open a product page, add products to the cart, and try selecting/deselecting individual cart items and **Select all**. Check that the subtotal and checkout list include only selected items, and that unselected items remain in the cart.
+4. Try checkout with test delivery details. For a payment test, choose **Card** and use only the PayMongo test card shown below. Do not use a real card or make a real QR Ph payment. Cash on delivery can be tested without opening PayMongo.
+5. Under **Account → Customer Support**, submit a test ticket, open **Track tickets**, and check whether a support reply appears without refreshing. Ask the Berry Co. team to reply to that ticket during the test.
+6. Repeat the main flows using the phone's back button and by backgrounding/reopening the app.
+
+### Test in a mobile browser
+
+1. Open the deployed storefront on your phone: <https://berry-co-mobile-testing-production.up.railway.app>.
+2. Sign in with the provided test account and repeat the product browsing, cart selection, checkout, and support-ticket checks above.
+3. Compare the browser behavior with the APK. Include your phone model, Android version, browser name, and whether you were on Wi-Fi or mobile data when reporting an issue.
+
+### PayMongo test payment
+
+Use PayMongo's test mode only. For a successful card test, enter card number `4343434343434345`, any future expiry date, any 3-digit CVC, and fictional billing/contact details. This does not use a real card. Never enter a real card number. GCash may be unavailable while it is inactive in the PayMongo account.
+
+The payment result can be confirmed in PayMongo's test dashboard. The Berry Co. order may still display **Pending** until the PayMongo webhook and Supabase payment-status credentials have been configured; report this separately from a failed checkout. Do not scan or pay any QR Ph code during testing.
+
+### What to report
+
+For each issue, include the platform (APK or mobile browser), device/OS/browser, steps to reproduce, what you expected, what happened, and a screenshot or screen recording with personal information hidden. Report whether checkout opened PayMongo and whether a support reply appeared without a refresh. Do not include passwords, one-time codes, API keys, card details, or identity documents.
