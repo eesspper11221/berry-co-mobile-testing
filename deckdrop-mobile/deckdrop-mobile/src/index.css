@@ -19,20 +19,13 @@
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
-  /* Custom scrollbar styling for mobile overflow elements */
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    display: none;
   }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(53, 50, 46, 0.15);
-    border-radius: 9999px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(53, 50, 46, 0.3);
+
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }
 
@@ -44,4 +37,3 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-

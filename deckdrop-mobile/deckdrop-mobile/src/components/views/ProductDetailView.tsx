@@ -342,7 +342,10 @@ export const ProductDetailView: React.FC = () => {
       )}
 
       {/* 🛍️ Floating Sticky Bottom Buy Box */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#FAF5EB]/95 backdrop-blur-md border-t border-[#35322E]/15 p-3 px-4 shadow-xl">
+      <div
+        className="fixed bottom-0 left-1/2 z-50 w-full max-w-[420px] -translate-x-1/2 bg-[#FAF5EB]/95 backdrop-blur-md border-t border-[#35322E]/15 p-3 px-4 shadow-xl"
+        style={{ bottom: 'calc(var(--bottom-nav-height) + var(--home-indicator-height))' }}
+      >
         <div className="max-w-md mx-auto flex items-center justify-between gap-3">
           {/* Quantity Stepper */}
           <div className="flex items-center bg-[#F3E4C8] border border-[#35322E]/20 rounded-full px-3 py-1.5 gap-3 text-xs font-black text-[#35322E]">
