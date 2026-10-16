@@ -39,6 +39,8 @@ For a typecheck without starting the server:
 
 `npm run lint`
 
+Railway is configured to build with Nixpacks and npm. Keep `package-lock.json` committed and do not add an empty or stale `bun.lock`, which can make Railway select Bun and fail its frozen-lockfile install.
+
 ## Build an Android APK
 
 **Prerequisites:** Android Studio, Android SDK, and a Java 17 JDK.
