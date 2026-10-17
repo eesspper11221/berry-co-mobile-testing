@@ -12,7 +12,7 @@
     "android:build": "npm run mobile:sync && cd android && gradlew.bat assembleDebug",
     "preview": "node server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/data/supportTickets.test.ts lib/paymentReturnUrls.test.js"
+    "test": "tsx --test src/data/supportTickets.test.ts src/lib/repositories/formatShippingAddress.test.ts lib/paymentReturnUrls.test.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",

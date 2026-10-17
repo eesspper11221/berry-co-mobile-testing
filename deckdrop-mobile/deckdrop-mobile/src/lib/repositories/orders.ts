@@ -1,5 +1,6 @@
 import {supabase} from '../supabase/client';
 import type {Order, OrderItem, OrderStatus, PaymentStatus} from '../../types';
+import {formatShippingAddress} from './formatShippingAddress';
 
 interface OrderRow {
   id: string;
@@ -70,7 +71,7 @@ const mapOrder = (row: OrderRow, items: OrderItem[]): Order => {
     customer_name: row.customer_name,
     customer_email: row.customer_email || '',
     customer_phone: row.customer_phone || undefined,
-    shipping_address: row.shipping_address || '',
+    shipping_address: formatShippingAddress(row.shipping_address || ''),
     status: normalizeOrderStatus(row.status),
     payment_status: normalizePaymentStatus(row.payment_status),
     payment_method: row.payment_method || 'Not specified',

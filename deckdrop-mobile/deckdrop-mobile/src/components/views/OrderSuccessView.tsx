@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Package } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
+import { formatShippingAddress } from '../../lib/repositories/formatShippingAddress';
 
 export const OrderSuccessView: React.FC = () => {
   const { selectedOrder, navigateTo } = useStore();
@@ -50,7 +51,7 @@ export const OrderSuccessView: React.FC = () => {
           </div>
           <div className="flex justify-between gap-3">
             <span className="font-medium text-[#35322E]/60">Delivery To</span>
-            <span className="max-w-[190px] text-right font-bold">{selectedOrder.shipping_address}</span>
+            <span className="max-w-[190px] break-words text-right font-bold">{formatShippingAddress(selectedOrder.shipping_address)}</span>
           </div>
           <div className="flex justify-between border-t border-[#35322E]/15 pt-2 text-sm font-black">
             <span>Order Total</span>

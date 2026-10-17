@@ -13,17 +13,7 @@ import {
 } from 'lucide-react';
 import { OrderStatus } from '../../types';
 import { createPayMongoCheckoutSession, openPayMongoCheckout } from '../../lib/payments/paymongo';
-
-const formatShippingAddress = (value: string) => {
-  try {
-    const parsed = JSON.parse(value) as Record<string, unknown>;
-    return [parsed.address, parsed.city, parsed.province, parsed.postalCode, parsed.country]
-      .filter((part): part is string => typeof part === 'string' && part.length > 0)
-      .join(', ');
-  } catch {
-    return value;
-  }
-};
+import { formatShippingAddress } from '../../lib/repositories/formatShippingAddress';
 
 export const OrderDetailView: React.FC = () => {
   const { selectedOrder, navigateTo, goBack, showToast, cancelOrder } = useStore();

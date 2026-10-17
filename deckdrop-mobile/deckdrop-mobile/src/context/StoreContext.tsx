@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase/client';
 import { toUserProfile } from '../lib/auth/profile';
 import { addUserCartItem, fetchUserCart, removeUserCartItem, updateUserCartItem } from '../lib/repositories/cart';
 import { cancelUserOrder, fetchUserOrders } from '../lib/repositories/orders';
+import { formatShippingAddress } from '../lib/repositories/formatShippingAddress';
 import { fetchProducts } from '../lib/repositories/products';
 import { addUserWishlistItem, clearUserWishlist, fetchUserWishlist, removeUserWishlistItem } from '../lib/repositories/wishlist';
 import { Product, CartItem, Order, OrderItem, UserProfile, ScreenType, FilterOptions } from '../types';
@@ -565,12 +566,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const orderData = (result.order || result) as Record<string, unknown>;
     const orderId = String(orderData.id || '');
     if (!orderId) throw new Error('The checkout response did not include an order ID.');
-    const addressData = (orderData.shippingAddress || orderData.shipping_address || shippingDetails) as Record<string, unknown>;
-    const orderAddress = typeof addressData === 'string'
-      ? addressData
-      : [addressData.fullName, addressData.address, addressData.city, addressData.province, addressData.postalCode, addressData.country]
-          .filter((part) => typeof part === 'string' && part.length > 0)
-          .join(', ');
+    const addressData = orderData.shippingAddress || orderData.shipping_address || shippingDetails;
+    const orderAddress = formatShippingAddress(addressData);
     const returnedItems = orderData.items || orderData.order_items;
     const orderItems: OrderItem[] = Array.isArray(returnedItems) && returnedItems.length > 0
       ? returnedItems.map((item, index) => {

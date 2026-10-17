@@ -3,6 +3,8 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
 import { InAppBrowser } from '@capgo/capacitor-inappbrowser';
+import { LoaderCircle } from 'lucide-react';
+import { matchesPaymentReturnUrl } from '../lib/paymentReturnUrls.js';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { MobileFrame } from './components/common/MobileFrame';
 import { Header } from './components/common/Header';
@@ -24,17 +26,12 @@ import { SupportView } from './components/views/SupportView';
 import { AuthView } from './components/views/AuthView';
 
 const isPaymentReturnUrl = (value: string): boolean => {
-  try {
-    const url = new URL(value);
-    if (url.protocol === 'berryco:') {
-      return url.hostname === 'payment-return' && url.pathname === '';
-    }
-    return !Capacitor.isNativePlatform()
-      && url.origin === window.location.origin
-      && url.pathname === '/payment-return';
-  } catch {
-    return false;
-  }
+  return matchesPaymentReturnUrl(
+    value,
+    Capacitor.isNativePlatform(),
+    __BERRYCO_SITE_URL__,
+    window.location.origin,
+  );
 };
 
 const NativeAppLifecycle: React.FC = () => {
@@ -143,7 +140,35 @@ const NativeAppLifecycle: React.FC = () => {
       });
   }, [currentUser, navigateToPaymentOrder, pendingPaymentUrl, refreshOrders, showToast]);
 
-  return null;
+  if (!pendingPaymentUrl) return null;
+
+  const isCancelledReturn = new URL(pendingPaymentUrl).searchParams.get('payment') === 'cancelled';
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#F3E4C8] px-5"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="w-full max-w-sm space-y-5 text-center">
+        <LoaderCircle size={42} className="mx-auto animate-spin text-[#E23B2E]" />
+        <div className="space-y-2">
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#E23B2E]">
+            {isCancelledReturn ? 'Payment not completed' : 'Payment pending'}
+          </p>
+          <h1 className="text-xl font-black text-[#35322E]">
+            {isCancelledReturn ? 'Returning to your order' : 'Confirming your PayMongo transaction'}
+          </h1>
+          <p className="text-sm font-medium leading-relaxed text-[#35322E]/70">
+            {isCancelledReturn
+              ? 'Your order is still pending. We are loading its latest status.'
+              : 'PayMongo returned you to Berry Co. We are checking your payment and loading your order.'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const MainScreenRouter: React.FC = () => {

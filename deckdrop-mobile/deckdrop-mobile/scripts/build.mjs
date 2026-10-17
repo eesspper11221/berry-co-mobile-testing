@@ -21,6 +21,7 @@ if (fs.existsSync(envFile)) {
 const supabaseUrl = process.env.BERRYCO_SUPABASE_URL;
 const supabasePublishableKey = process.env.BERRYCO_SUPABASE_PUBLISHABLE_KEY;
 const apiBaseUrl = process.env.BERRYCO_API_BASE_URL || process.env.BERRYCO_SITE_URL || '';
+const siteUrl = process.env.BERRYCO_SITE_URL || apiBaseUrl;
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error('Set BERRYCO_SUPABASE_URL and BERRYCO_SUPABASE_PUBLISHABLE_KEY in .env.local before building.');
 }
@@ -41,6 +42,7 @@ await esbuild.build({
     __BERRYCO_SUPABASE_URL__: JSON.stringify(supabaseUrl),
     __BERRYCO_SUPABASE_PUBLISHABLE_KEY__: JSON.stringify(supabasePublishableKey),
     __BERRYCO_API_BASE_URL__: JSON.stringify(apiBaseUrl),
+    __BERRYCO_SITE_URL__: JSON.stringify(siteUrl),
   },
   plugins: [{
     name: 'ignore-css-imports',
