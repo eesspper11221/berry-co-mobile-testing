@@ -27,7 +27,7 @@ export const createPayMongoCheckoutSession = async (
       Authorization: `Bearer ${session.access_token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({orderId, paymentMethod}),
+    body: JSON.stringify({orderId, paymentMethod, nativeApp: Capacitor.isNativePlatform()}),
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {

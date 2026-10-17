@@ -160,7 +160,7 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
       return;
     }
 
-    const {orderId, paymentMethod} = request.body || {};
+    const {orderId, paymentMethod, nativeApp} = request.body || {};
     if (typeof orderId !== 'string' || !orderId || !['gcash', 'card'].includes(paymentMethod)) {
       response.status(400).json({error: 'A valid order and online payment method are required.'});
       return;
@@ -222,7 +222,7 @@ app.post('/api/payments/paymongo/checkout-session', async (request, response) =>
     const siteUrl = process.env.BERRYCO_SITE_URL || '';
     const returnUrls = createPaymentReturnUrls(
       order.id,
-      request.get('origin') === 'capacitor://localhost',
+      nativeApp === true,
       siteUrl,
     );
 

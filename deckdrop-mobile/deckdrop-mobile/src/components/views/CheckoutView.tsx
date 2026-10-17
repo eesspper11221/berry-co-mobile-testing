@@ -31,19 +31,19 @@ export const CheckoutView: React.FC = () => {
   const [postalCode, setPostalCode] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'gcash' | 'card' | 'cod'>('gcash');
   const [orderConfirmed, setOrderConfirmed] = useState<Order | null>(null);
+  const [paymentOrder, setPaymentOrder] = useState<Order | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [isRedirectingToPayment, setIsRedirectingToPayment] = useState(false);
 
   const redirectToPayment = async (order: Order) => {
     setIsRedirectingToPayment(true);
-    setOrderConfirmed(order);
+    setPaymentOrder(order);
     setSubmitError('');
     try {
       const session = await createPayMongoCheckoutSession(order.id, paymentMethod as 'gcash' | 'card');
       await openPayMongoCheckout(session.checkoutUrl);
     } catch (error) {
-      setOrderConfirmed(order);
       setSubmitError(error instanceof Error ? error.message : 'Unable to start payment.');
     } finally {
       setIsRedirectingToPayment(false);
@@ -149,6 +149,51 @@ export const CheckoutView: React.FC = () => {
               className="w-full py-3 rounded-full bg-[#F3E4C8] text-[#35322E] font-bold text-xs hover:bg-[#EAD0AA] transition cursor-pointer"
             >
               Continue Shopping
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentOrder) {
+    return (
+      <div className="px-4 py-8 space-y-5 animate-in fade-in duration-300">
+        <div className="bg-[#FAF5EB] rounded-3xl p-6 border border-[#35322E]/10 shadow-md text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-xs">
+            <CreditCard size={32} />
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#E23B2E]">
+              Payment Pending
+            </span>
+            <h1 className="text-xl font-black text-[#35322E]">
+              {isRedirectingToPayment ? 'Opening secure checkout' : 'Complete your payment'}
+            </h1>
+            <p className="text-xs font-semibold text-[#35322E]/70">
+              Order <span className="font-bold text-[#35322E]">#{paymentOrder.order_number}</span> is awaiting payment confirmation.
+            </p>
+          </div>
+          {submitError && (
+            <p role="alert" className="rounded-xl border border-[#E23B2E]/30 bg-[#E23B2E]/10 px-3 py-2.5 text-xs font-bold text-[#B82A20]">
+              PayMongo checkout could not be started: {submitError}
+            </p>
+          )}
+          <div className="flex flex-col gap-2 pt-2">
+            <button
+              type="button"
+              disabled={isRedirectingToPayment}
+              onClick={() => void redirectToPayment(paymentOrder)}
+              className="w-full py-3 rounded-full bg-[#E23B2E] text-white font-extrabold text-xs disabled:opacity-50"
+            >
+              {isRedirectingToPayment ? 'Connecting to PayMongo...' : 'Continue to PayMongo'}
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo('order-detail', {orderId: paymentOrder.id})}
+              className="w-full py-3 rounded-full bg-[#F3E4C8] text-[#35322E] font-bold text-xs hover:bg-[#EAD0AA] transition"
+            >
+              View Pending Order
             </button>
           </div>
         </div>
